@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Conda/venv
+.venv/
+env/
+*.egg-info/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Large data files
+dataset/
+features/
+results/
+labels/*.xls
+
+# OS files
+.DS_Store
+Thumbs.db
