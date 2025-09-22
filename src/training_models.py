@@ -65,7 +65,7 @@ def run_multioutput_model(merged_csv, task_name, model, model_name):
     
     # Features
     X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"])
-    y = df[["depression", "stress", "anxeity"]]
+    y = df[["depression", "stress", "anxiety"]]
     
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -77,7 +77,7 @@ def run_multioutput_model(merged_csv, task_name, model, model_name):
     y_pred = multi_model.predict(X_test)
     
     results = []
-    for i, col in enumerate(["depression", "stress", "anxeity"]):
+    for i, col in enumerate(["depression", "stress", "anxiety"]):
         mse = mean_squared_error(y_test.iloc[:,i], y_pred[:,i])
         rmse = np.sqrt(mse)
         r2 = r2_score(y_test.iloc[:,i], y_pred[:,i])
