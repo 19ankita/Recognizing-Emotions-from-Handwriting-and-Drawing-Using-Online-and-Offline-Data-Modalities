@@ -14,6 +14,6 @@ Install dependencies:
 ```bash
 pip install -r requirements.txt
 
-Run experiments (example for words + cursive):
+## Run experiments (example for words + cursive):
 python main.py words cursive --mode all
 
