@@ -23,6 +23,9 @@ def run_model(merged_csv, task_name, model, model_name, target="total"):
     # Define X (all features except id/user and labels)
     X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
     
+    # Keep only numeric features
+    X = X.select_dtypes(include=[np.number])
+    
     if target == "total":
         y = df["total"] # single output = total DASS score
     else:
@@ -65,6 +68,10 @@ def run_multioutput_model(merged_csv, task_name, model, model_name):
     
     # Features
     X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
+    
+    # Keep only numeric features
+    X = X.select_dtypes(include=[np.number])
+    
     y = df[["depression", "stress", "anxiety"]]
     
     # Train/test split
@@ -112,6 +119,9 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name):
     df = pd.read_csv(merged_csv)
     
     X = df.drop(["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
+    
+    # Keep only numeric features
+    X = X.select_dtypes(include=[np.number])
     
     results = []
     for target in ["depression", "anxiety", "stress"]:
