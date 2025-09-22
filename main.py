@@ -49,15 +49,26 @@ def prepare_labels():
 
 
 def main():
-    
+
     # --- Parse command line arguments ---
     parser = argparse.ArgumentParser(description="Run regression experiments on handwriting tasks")
-    parser.add_argument("tasks", nargs="+", help="List of tasks (e.g., words cursive house)")
+    parser.add_argument("tasks", nargs="*", help="List of tasks (e.g., words cursive house)")
+    parser.add_argument("--all-tasks", action="store_true",
+                        help="Run experiments on all available tasks inside dataset/ folder.")
     parser.add_argument("--mode", choices=["total", "subscales", "multi", "all"], default="all",
-                        help="Experiment mode: total (TOTAL DASS), subscales (Depression/Anxiety/Stress), multi (multi-output), all (default).")
+                        help="Experiment mode: total (TOTAL DASS), subscales (Depression/Anxiety/Stress separately), multi (multi-output), all (default).")
     args = parser.parse_args()
 
-    tasks = args.tasks
+    # Select tasks
+    if args.all_tasks:
+        tasks = [t for t in os.listdir("dataset") if os.path.isdir(os.path.join("dataset", t))]
+        print(f"\nDetected tasks automatically: {tasks}")
+    else:
+        tasks = args.tasks
+        if not tasks:
+            print("Please provide at least one task name or use --all-tasks")
+            sys.exit(1)
+
     mode = args.mode
     
     # Load cleaned DASS labels 
