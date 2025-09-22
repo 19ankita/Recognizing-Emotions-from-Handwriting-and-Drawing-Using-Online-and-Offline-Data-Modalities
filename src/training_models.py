@@ -21,7 +21,7 @@ def run_model(merged_csv, task_name, model, model_name, target="total"):
     df = pd.read_csv(merged_csv)
 
     # Define X (all features except id/user and labels)
-    X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"])
+    X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
     
     if target == "total":
         y = df["total"] # single output = total DASS score
@@ -64,7 +64,7 @@ def run_multioutput_model(merged_csv, task_name, model, model_name):
     df = pd.read_csv(merged_csv)
     
     # Features
-    X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"])
+    X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
     y = df[["depression", "stress", "anxiety"]]
     
     # Train/test split
@@ -111,10 +111,13 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name):
     
     df = pd.read_csv(merged_csv)
     
-    X = df.drop(["id", "user", "depression", "anxiety", "stress", "total"])
+    X = df.drop(["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
     
     results = []
     for target in ["depression", "anxiety", "stress"]:
+        if target not in df.columns:
+            print(f"Column {target} not found in {merged_csv}, skipping...")
+            continue
         y = df[target]
         
     # Train/test split
