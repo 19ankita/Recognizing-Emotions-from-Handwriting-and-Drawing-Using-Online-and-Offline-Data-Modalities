@@ -13,3 +13,7 @@ to predict psychological states using regression models (Linear, Ridge, Lasso, E
 Install dependencies:
 ```bash
 pip install -r requirements.txt
+
+Run experiments (example for words + cursive):
+python main.py words cursive --mode all
+
