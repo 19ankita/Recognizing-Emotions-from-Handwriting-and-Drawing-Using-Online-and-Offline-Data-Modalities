@@ -75,15 +75,44 @@ def main():
     labels = prepare_labels()
     results = []
     
-    # Models to evaluate
+    # Models with preprocessing
     models = [
-         (LinearRegression(), "Linear Regression"),
-         (Ridge(alpha=1.0), "Ridge Regression"),
-         (Lasso(alpha=0.1), "Lasso Regression"),
-         (ElasticNet(alpha=0.1, l1_ratio=0.5), "Elastic Net"),
-         (RandomForestRegressor(n_estimators=100, random_state=42), "Random Forest"),
-         (GradientBoostingRegressor(n_estimators=100, random_state=42), "Gradient Boosting")
-     ]
+        (Pipeline([
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=0.95)), # reduce to 20 PCs (tunable)
+            ("model", LinearRegression()) 
+        ]), "Linear Regression"),
+        
+        (Pipeline([
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=0.95)),
+            ("model", Ridge(alpha=1.0)) 
+        ]), "Ridge Regression"),
+        
+        (Pipeline([
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=0.95)),
+            ("model", Lasso(alpha=0.1)) 
+        ]), "Lasso Regression"),
+        
+        (Pipeline([
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=0.95)),
+            ("model", ElasticNet(alpha=0.1, l1_ratio=0.5)) 
+        ]), "Elastic Net"),
+        
+        (Pipeline([
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=0.95)),
+            ("model", RandomForestRegressor(n_estimators=100, random_state=42))
+        ]), "Random Forest"),
+        
+        (Pipeline([
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=0.95)),
+            ("model", GradientBoostingRegressor(n_estimators=100, random_state=42)) 
+        ]), "Gradient Boosting"),      
+    ]
     
     for task in tasks:
         input_dir = os.path.join("dataset", task)
@@ -142,8 +171,7 @@ def main():
             if mode in ["multi", "all"]:
                 # 3. Separate models for each subscale
                 results.extend(run_separate_subscale_models(merged_csv, task, model, model_name))
-             
-        
+                   
     
     if results:
         results_dir = "results"
