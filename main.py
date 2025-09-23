@@ -4,6 +4,9 @@ import sys
 import re
 import pandas as pd
 
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 from src.svc_reader import read_all_svc_files
 from src.run_feature_extractor import run_feature_extraction
