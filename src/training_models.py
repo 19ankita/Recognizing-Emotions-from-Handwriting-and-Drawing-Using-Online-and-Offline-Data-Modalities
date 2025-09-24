@@ -38,6 +38,9 @@ def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5
             }
             search_type = "random"
         
+        if isinstance(model, MultiOutputRegressor) and param_grid:
+            param_grid = {f"estimator_{k}": v for k,v in param_grid.items()}
+            
         if param_grid:
             if search_type == "grid":
                 search = GridSearchCV(model, param_grid, cv=cv, 
