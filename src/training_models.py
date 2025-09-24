@@ -195,7 +195,7 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
         
         # Fit model
         best_model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
+        y_pred = best_model.predict(X_test)
         
         # Metrics
         mse = mean_squared_error(y_test, y_pred)
