@@ -85,7 +85,7 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
         raise ValueError("Invalid target for run_model. Use run_multioutput_model for multiple targets.")        
     
     # CV + hyperparameter tuning
-    best_model, cv_mse, cv_std = evaluate_with_cv(model, X, y, model_name, do_cv, do_seach, cv_folds)
+    best_model, cv_mse, cv_std = evaluate_with_cv(model, X, y, model_name, do_cv, do_search, cv_folds)
 
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
