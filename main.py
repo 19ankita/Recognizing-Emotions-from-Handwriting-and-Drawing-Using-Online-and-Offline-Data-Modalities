@@ -60,6 +60,9 @@ def main():
                         help="Run experiments on all available tasks inside dataset/ folder.")
     parser.add_argument("--mode", choices=["total", "subscales", "multi", "all"], default="all",
                         help="Experiment mode: total (TOTAL DASS), subscales (Depression/Anxiety/Stress separately), multi (multi-output), all (default).")
+    parser.add_argument("--cv", action="store_true", help="Enable cross-validation reporting.")
+    parser.add_argument("--search", action="store_true", help="Enable hyperparameter search (Grid/RandomizedSearchCV).")
+    parser.add_argument("--cv-folds", type=int, default=5, help="Number of folds for cross-validation (default=5).")
     args = parser.parse_args()
 
     # Select tasks
@@ -78,44 +81,33 @@ def main():
     labels = prepare_labels()
     results = []
     
-    # Models with preprocessing
-    models = [
-        (Pipeline([
-            ("scaler", StandardScaler()),
-            ("pca", PCA(n_components=0.95)), # reduce to 20 PCs (tunable)
-            ("model", LinearRegression()) 
-        ]), "Linear Regression"),
-        
-        (Pipeline([
-            ("scaler", StandardScaler()),
-            ("pca", PCA(n_components=0.95)),
-            ("model", Ridge(alpha=1.0)) 
-        ]), "Ridge Regression"),
-        
-        (Pipeline([
-            ("scaler", StandardScaler()),
-            ("pca", PCA(n_components=0.95)),
-            ("model", Lasso(alpha=0.1)) 
-        ]), "Lasso Regression"),
-        
-        (Pipeline([
-            ("scaler", StandardScaler()),
-            ("pca", PCA(n_components=0.95)),
-            ("model", ElasticNet(alpha=0.1, l1_ratio=0.5)) 
-        ]), "Elastic Net"),
-        
-        (Pipeline([
-            ("scaler", StandardScaler()),
-            ("pca", PCA(n_components=0.95)),
-            ("model", RandomForestRegressor(n_estimators=100, random_state=42))
-        ]), "Random Forest"),
-        
-        (Pipeline([
-            ("scaler", StandardScaler()),
-            ("pca", PCA(n_components=0.95)),
-            ("model", GradientBoostingRegressor(n_estimators=100, random_state=42)) 
-        ]), "Gradient Boosting"),      
+    # Define models
+    linear_models = [
+        ("Linear Regression", LinearRegression()),
+        ("Ridge Regression", Ridge(alpha=1.0)),
+        ("Lasso Regression", Lasso(alpha=0.1)),
+        ("Elastic Net", ElasticNet(alpha=0.1, l1_ratio=0.5))
     ]
+
+    ensemble_models = [
+        ("Random Forest", RandomForestRegressor(n_estimators=100, random_state=42)),
+        ("Gradient Boosting", GradientBoostingRegressor(n_estimators=100, random_state=42))
+    ]
+    
+    # Apply scaling + PCA ONLY to linear models
+    models = []
+
+    for name, base_model in linear_models:
+        pipeline = Pipeline([
+            ("scaler", StandardScaler()),
+            ("pca", PCA(n_components=0.95)),  # keep 95% variance
+            ("model", base_model)
+        ])
+        models.append((pipeline, name))
+
+    # Ensemble models WITHOUT scaling/PCA
+    for name, model in ensemble_models:
+        models.append((model, name))
     
     for task in tasks:
         input_dir = os.path.join("dataset", task)
@@ -165,15 +157,20 @@ def main():
         for model, model_name in models:
             if mode in ["total", "all"]:
                 # 1. Single-output (TOTAL DASS)
-                results.append(run_model(merged_csv, task, model, model_name, target="total"))
+                results.append(run_model(merged_csv, task, model, model_name, target="total",
+                                         do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds
+                                         ))
             
             if mode in ["subscales", "all"]:
                 # 2. Multi-output (Depression, Anxiety, Stress simultaneously)
-                results.extend(run_multioutput_model(merged_csv, task, model, model_name))
+                results.extend(run_multioutput_model(merged_csv, task, model, model_name,
+                               do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds
+                               ))
 
             if mode in ["multi", "all"]:
                 # 3. Separate models for each subscale
-                results.extend(run_separate_subscale_models(merged_csv, task, model, model_name))
+                results.extend(run_separate_subscale_models(merged_csv, task, model, model_name,
+                                                            do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds))
                    
     
     if results:
