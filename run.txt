@@ -1,15 +1,15 @@
 Run normally (no CV, no search):
-python main.py words --mode total
+!python main.py --all-tasks --mode all
 
 Run with cross-validation:
-python main.py words --mode total --cv
+!python main.py --all-tasks --mode all --cv
 
 
 Run with cross-validation + hyperparameter search:
-python main.py words --mode all --cv --search
+!python main.py --all-tasks --mode all --cv --search
 
 
 10-fold CV + hyperparameter search:
-python main.py words --mode all --cv --search --cv-folds 10
+!python main.py --all-tasks --mode all --cv-folds 10
 
 
