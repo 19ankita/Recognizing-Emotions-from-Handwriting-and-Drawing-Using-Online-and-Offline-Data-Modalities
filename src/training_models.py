@@ -61,7 +61,7 @@ def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5
     return best_model, cv_mse, cv_std
 
 
-def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=False, do_seach=False, cv_folds=5):
+def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=False, do_search=False, cv_folds=5):
     """
     Train any regression model on TOTAL DASS score and return metrics.
 
@@ -134,7 +134,7 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     best_model.fit(X_train, y_train)
-    y_pred = multi_model.predict(X_test)
+    y_pred = best_model.predict(X_test)
     
     results = []
     for i, col in enumerate(["depression", "stress", "anxiety"]):
@@ -182,38 +182,38 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
             continue
         y = df[target]
         
-    # CV + hyperparam tuning
-    best_model, cv_mse, cv_std = evaluate_with_cv(model, X, y, model_name, do_cv, do_search, cv_folds)
+        # CV + hyperparam tuning
+        best_model, cv_mse, cv_std = evaluate_with_cv(model, X, y, model_name, do_cv, do_search, cv_folds)
+            
+        # Train/test split
+        X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42
+            )             
         
-    # Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42
-        )             
-    
-    # Fit model
-    best_model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-       
-    # Metrics
-    mse = mean_squared_error(y_test, y_pred)
-    rmse = np.sqrt(mse)
-    r2 = r2_score(y_test, y_pred)
-    
-    print(f"\nResults for {task_name} - {model_name} (Target = {target})")
-    print(f"  MSE:  {mse:.2f}")
-    print(f"  RMSE: {rmse:.2f}")
-    print(f"  R²:   {r2:.3f}")
+        # Fit model
+        best_model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        
+        # Metrics
+        mse = mean_squared_error(y_test, y_pred)
+        rmse = np.sqrt(mse)
+        r2 = r2_score(y_test, y_pred)
+        
+        print(f"\nResults for {task_name} - {model_name} (Target = {target})")
+        print(f"  MSE:  {mse:.2f}")
+        print(f"  RMSE: {rmse:.2f}")
+        print(f"  R²:   {r2:.3f}")
 
-    results.append({
-        "Task": task_name,
-        "Model": model_name,
-        "Target": target.capitalize(),
-        "MSE": mse,
-        "RMSE": rmse,
-        "R2": r2,
-        "CV_MSE": cv_mse,
-        "CV_STD": cv_std
-    })
+        results.append({
+            "Task": task_name,
+            "Model": model_name,
+            "Target": target.capitalize(),
+            "MSE": mse,
+            "RMSE": rmse,
+            "R2": r2,
+            "CV_MSE": cv_mse,
+            "CV_STD": cv_std
+        })
 
     return results
 
