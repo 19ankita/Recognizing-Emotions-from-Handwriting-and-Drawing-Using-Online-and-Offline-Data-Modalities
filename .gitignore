@@ -19,3 +19,8 @@ labels/*.xls
 # OS files
 .DS_Store
 Thumbs.db
+
+# Ignore all generated plots
+utils/*.png
+
+run.txt
