@@ -6,7 +6,7 @@ Run with cross-validation:
 
 
 Run with cross-validation + hyperparameter search:
-!python main.py --all-tasks --mode all --cv --search
+!python main.py --all-tasks --mode all --cv --search --shap
 
 
 10-fold CV + hyperparameter search:

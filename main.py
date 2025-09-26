@@ -63,6 +63,8 @@ def main():
     parser.add_argument("--cv", action="store_true", help="Enable cross-validation reporting.")
     parser.add_argument("--search", action="store_true", help="Enable hyperparameter search (Grid/RandomizedSearchCV).")
     parser.add_argument("--cv-folds", type=int, default=5, help="Number of folds for cross-validation (default=5).")
+    parser.add_argument("--shap", action="store_true", help="Run SHAP analysis for each model.")
+
     args = parser.parse_args()
 
     # Select tasks

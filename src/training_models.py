@@ -1,9 +1,7 @@
 import pandas as pd
 import numpy as np
 
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from sklearn.pipeline import Pipeline
+from utils.shap_utils import run_shap_analysis
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, RandomizedSearchCV, KFold
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.multioutput import MultiOutputRegressor
@@ -105,6 +103,10 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
     print(f"  RMSE: {rmse:.2f}")
     print(f"  R²:   {r2:.3f}")
     
+    # Run SHAP after evaluation
+    run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
+
+    
     return {
         "Task": task_name,
         "Model": model_name,
@@ -150,6 +152,8 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
         print(f" RMSE: {rmse:.2f}")
         print(f" R2: {r2:.3f}")
         
+        # Run SHAP after evaluation
+        run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
         
         results.append({
             "Task": task_name,
@@ -206,6 +210,9 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
         print(f"  MSE:  {mse:.2f}")
         print(f"  RMSE: {rmse:.2f}")
         print(f"  R²:   {r2:.3f}")
+        
+        # Run SHAP after evaluation
+        run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
 
         results.append({
             "Task": task_name,
