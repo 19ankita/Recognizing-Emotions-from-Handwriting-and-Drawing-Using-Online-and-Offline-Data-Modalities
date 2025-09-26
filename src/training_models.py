@@ -109,11 +109,11 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
         "Task": task_name,
         "Model": model_name,
         "Target": "TOTAL DASS",
-        "MSE": mse,
-        "RMSE": rmse,
-        "R2": r2,
-        "CV_MSE": cv_mse,
-        "CV_STD": cv_std
+        "MSE": float(mse),
+        "RMSE": float(rmse),
+        "R2": float(r2),
+        "CV_MSE": float(cv_mse),
+        "CV_STD": float(cv_std)
     }
 
 
@@ -155,11 +155,11 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
             "Task": task_name,
             "Model": model_name,
             "Target": col.capitalize(),
-            "MSE": mse,
-            "RMSE": rmse,
-            "R2": r2,
-            "CV_MSE": cv_mse,
-            "CV_STD": cv_std
+            "MSE": float(mse),
+            "RMSE": float(rmse),
+            "R2": float(r2),
+            "CV_MSE": float(cv_mse),
+            "CV_STD": float(cv_std)
         })
         
     return results    
@@ -211,16 +211,13 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
             "Task": task_name,
             "Model": model_name,
             "Target": target.capitalize(),
-            "MSE": mse,
-            "RMSE": rmse,
-            "R2": r2,
-            "CV_MSE": cv_mse,
-            "CV_STD": cv_std
+            "MSE": float(mse),
+            "RMSE": float(rmse),
+            "R2": float(r2),
+            "CV_MSE": float(cv_mse),
+            "CV_STD": float(cv_std)
         })
 
-    return results
-
-
-
-            
-                    
+    return results 
+    
+     
