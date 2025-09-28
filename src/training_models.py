@@ -62,7 +62,7 @@ def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5
     return best_model, cv_mse, cv_std
 
 
-def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=False, do_search=False, cv_folds=5):
+def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=False, do_search=False, cv_folds=5, do_shap=False):
     """
     Train any regression model on TOTAL DASS score and return metrics.
 
@@ -121,7 +121,7 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
     return results
 
 
-def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False, do_search=False, cv_folds=5):
+def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False, do_search=False, cv_folds=5, do_shap=False):
     """
     Train regression model (multi-output) on Depression, Anxiety, Stress simultaneously.
     """
@@ -172,7 +172,7 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
     return results    
 
 
-def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv=False, do_search=False, cv_folds=5):
+def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv=False, do_search=False, cv_folds=5, do_shap=False):
     """
     Run 3 separate regressions:
         - One for Depression
