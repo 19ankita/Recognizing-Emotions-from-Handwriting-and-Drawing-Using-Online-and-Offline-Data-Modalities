@@ -21,6 +21,6 @@ labels/*.xls
 Thumbs.db
 
 # Ignore all generated plots
-utils/*.png
+utils/figures/*.pdf
 
 run.txt
