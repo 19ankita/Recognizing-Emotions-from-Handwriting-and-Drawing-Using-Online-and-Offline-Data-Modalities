@@ -103,11 +103,7 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
     print(f"  RMSE: {rmse:.2f}")
     print(f"  R²:   {r2:.3f}")
     
-    # Run SHAP after evaluation
-    run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
-
-    
-    return {
+    results = {
         "Task": task_name,
         "Model": model_name,
         "Target": "TOTAL DASS",
@@ -117,6 +113,12 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
         "CV_MSE": float(cv_mse),
         "CV_STD": float(cv_std)
     }
+    
+    # Run SHAP after evaluation
+    if do_shap:
+        run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
+    
+    return results
 
 
 def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False, do_search=False, cv_folds=5):
@@ -153,7 +155,8 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
         print(f" R2: {r2:.3f}")
         
         # Run SHAP after evaluation
-        run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
+        if do_shap:
+            run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
         
         results.append({
             "Task": task_name,
@@ -212,7 +215,8 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
         print(f"  R²:   {r2:.3f}")
         
         # Run SHAP after evaluation
-        run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
+        if do_shap:
+            run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
 
         results.append({
             "Task": task_name,

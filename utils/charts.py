@@ -1,6 +1,10 @@
+import os
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+os.makedirs("figures", exist_ok=True)
 
 # -------------------------
 # 1. Load and Clean Data
@@ -44,7 +48,8 @@ for target in targets:
     plt.legend(title="Model", bbox_to_anchor=(1.05, 1), loc="upper left")
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig(f"barplot_{target.replace(' ', '_')}.png", dpi=300)
+    save_path = os.path.join("figures", f"barplot_{target.replace(' ', '_')}.pdf")
+    plt.savefig(save_path, dpi=100)
     plt.close()
 
     # =========================
@@ -60,7 +65,8 @@ for target in targets:
     plt.ylabel("Task")
     plt.xlabel("Model")
     plt.tight_layout()
-    plt.savefig(f"heatmap_{target.replace(' ', '_')}.png", dpi=300)
+    save_path = os.path.join("figures", f"heatmap_{target.replace(' ', '_')}.pdf")
+    plt.savefig(save_path, dpi=100)
     plt.close()
 
     

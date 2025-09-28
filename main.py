@@ -160,19 +160,22 @@ def main():
             if mode in ["total", "all"]:
                 # 1. Single-output (TOTAL DASS)
                 results.append(run_model(merged_csv, task, model, model_name, target="total",
-                                         do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds
+                                         do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds,
+                                         do_shap=args.shap
                                          ))
             
             if mode in ["subscales", "all"]:
                 # 2. Multi-output (Depression, Anxiety, Stress simultaneously)
                 results.extend(run_multioutput_model(merged_csv, task, model, model_name,
-                               do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds
+                               do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds,
+                               do_shap=args.shap
                                ))
 
             if mode in ["multi", "all"]:
                 # 3. Separate models for each subscale
                 results.extend(run_separate_subscale_models(merged_csv, task, model, model_name,
-                                                            do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds))
+                                                            do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds,
+                                                            do_shap=args.shap))
                    
     
     if results:
