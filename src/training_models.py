@@ -80,6 +80,9 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
     # Keep only numeric features
     X = X.select_dtypes(include=[np.number])
     
+    leak_cols = {"depression", "anxiety", "stress", "total"}
+    assert leak_cols.isdisjoint(X.columns), f"Leakage: {leak_cols & set(X.columns)}"
+    
     if target == "total":
         y = df["total"] # single output = total DASS score
     else:
@@ -130,6 +133,10 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
     X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
     # Keep only numeric features
     X = X.select_dtypes(include=[np.number])
+    
+    leak_cols = {"depression", "anxiety", "stress", "total"}
+    assert leak_cols.isdisjoint(X.columns), f"Leakage: {leak_cols & set(X.columns)}"
+    
     y = df[["depression", "stress", "anxiety"]]
     
     # Wrap model in MultiOutputRegressor
@@ -189,6 +196,9 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
     # Keep only numeric features
     X = X.select_dtypes(include=[np.number])
     
+    leak_cols = {"depression", "anxiety", "stress", "total"}
+    assert leak_cols.isdisjoint(X.columns), f"Leakage: {leak_cols & set(X.columns)}"
+
     results = []
     for target in ["depression", "anxiety", "stress"]:
         if target not in df.columns:
