@@ -154,9 +154,11 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
         print(f" RMSE: {rmse:.2f}")
         print(f" R2: {r2:.3f}")
         
-        # Run SHAP after evaluation
+        
         if do_shap:
-            run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
+            # Explain the *i-th* fitted estimator directly (can be Pipeline or a bare model)
+            base_estimator_i = best_model.estimators_[i]
+            run_shap_analysis(base_estimator_i, X_train, X_test, task_name, model_name, target=col)
         
         results.append({
             "Task": task_name,
@@ -168,6 +170,8 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
             "CV_MSE": float(cv_mse),
             "CV_STD": float(cv_std)
         })
+        
+        
         
     return results    
 
@@ -216,7 +220,7 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
         
         # Run SHAP after evaluation
         if do_shap:
-            run_shap_analysis(best_model, X_train, X_test, task_name, model_name, "TOTAL_DASS")
+            run_shap_analysis(best_model, X_train, X_test, task_name, model_name, target=target)
 
         results.append({
             "Task": task_name,
