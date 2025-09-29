@@ -192,7 +192,7 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
     Returns metrics for each.
     """
     df = pd.read_csv(merged_csv)
-    X = df.drop(["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
+    X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
     # Keep only numeric features
     X = X.select_dtypes(include=[np.number])
     
