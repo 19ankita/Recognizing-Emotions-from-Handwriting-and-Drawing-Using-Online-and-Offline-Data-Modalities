@@ -1,10 +1,13 @@
-# utils/shap_utils.py
+
 import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from collections import Counter, defaultdict
+import seaborn as sns
 import shap
 from sklearn.pipeline import Pipeline
+
 
 # ---------------------------
 # Small helpers
@@ -98,21 +101,8 @@ def backproject_linear_coefs(pipeline_or_model, feature_names):
 def run_shap_analysis(
     model, X_train, X_test, task_name, model_name, target, top_k=20, results_dir="results"
 ):
-    """
-    Run SHAP for a single-output sklearn model or Pipeline.
-    If PCA is present, SHAP values are back-projected to the original feature space.
-
-    Saves:
-      - shap_importance_...csv  (mean |SHAP| per feature)
-      - shap_beeswarm_...png    (signed/directional SHAP)
-      - shap_bar_...png         (magnitude-only bar)
-      - shap_signed_mean_...csv (mean signed SHAP)
-      - shap_bar_signed_...png  (signed bar)
-      - coefs_...csv + coefs_bar_...png (linear models only)
-    """
     os.makedirs(results_dir, exist_ok=True)
 
-    # 1) Unwrap pipeline and transform data if needed
     transformer, final_model, pca, scaler = _unwrap_pipeline(model)
 
     if transformer is not None:
@@ -125,7 +115,6 @@ def run_shap_analysis(
     X_train_tf = _ensure_2d(X_train_tf)
     X_test_tf = _ensure_2d(X_test_tf)
 
-    # 2) Choose explainer
     if _is_tree_model(final_model):
         explainer = shap.TreeExplainer(final_model)
         shap_raw = explainer.shap_values(X_test_tf)
@@ -133,67 +122,35 @@ def run_shap_analysis(
         explainer = shap.Explainer(final_model, X_train_tf)
         shap_raw = explainer(X_test_tf)
 
-    shap_raw = _to_numpy(shap_raw)  # (n_samples, n_features_in_tf)
+    shap_raw = _to_numpy(shap_raw)
 
-    # 3) Back-project SHAP to original feature space if PCA was used
     if pca is not None:
-        # shap_raw: (n_samples, n_components); components_: (n_components, n_features_orig)
         shap_matrix = shap_raw @ pca.components_
         feature_names = list(X_train.columns) if hasattr(X_train, "columns") else [f"f{i}" for i in range(shap_matrix.shape[1])]
     else:
         shap_matrix = shap_raw
         feature_names = list(X_train.columns) if hasattr(X_train, "columns") else [f"f{i}" for i in range(shap_matrix.shape[1])]
 
-    # 4) Global magnitude (mean |SHAP|)
+    # ---------------------------
+    # Global SHAP metrics
+    # ---------------------------
     mean_abs_shap = np.abs(shap_matrix).mean(axis=0)
-    importance_df = pd.DataFrame({"feature": feature_names, "mean_abs_shap": mean_abs_shap}).sort_values(
-        "mean_abs_shap", ascending=False
-    )
+    signed_mean_shap = shap_matrix.mean(axis=0)
+
+    importance_df = pd.DataFrame({
+        "feature": feature_names,
+        "mean_abs_shap": mean_abs_shap,
+        "signed_mean_shap": signed_mean_shap
+    }).sort_values("mean_abs_shap", ascending=False)
 
     out_csv = os.path.join(results_dir, f"shap_importance_{task_name}_{model_name}_{target}.csv")
     importance_df.to_csv(out_csv, index=False)
-    print(f"SHAP importances saved: {out_csv}")
-
-    # 5) Select top-k features (by magnitude) for plotting
-    top = importance_df.head(top_k).copy()
-    top_features = top["feature"].tolist()
-    top_idx = [feature_names.index(f) for f in top_features]
-    shap_top = shap_matrix[:, top_idx]
-
-    # Prepare X slice for colored beeswarm (optional)
-    if hasattr(X_test, "loc"):
-        X_test_top = X_test.loc[:, top_features]
-    else:
-        X_test_top = None
 
     # ---------------------------
-    # (A) Beeswarm: signed direction
+    # Per-task signed SHAP output
     # ---------------------------
-    plt.figure()
-    shap.summary_plot(shap_top, X_test_top, feature_names=top_features, show=False, plot_type="dot")
-    out_bee = os.path.join(results_dir, f"shap_beeswarm_{task_name}_{model_name}_{target}_top{top_k}.png")
-    plt.savefig(out_bee, dpi=300, bbox_inches="tight")
-    plt.close()
-    print(f"SHAP beeswarm saved: {out_bee}")
-
-    # ---------------------------
-    # (B) Magnitude-only bar (what you already had)
-    # ---------------------------
-    plt.figure(figsize=(8, 6))
-    top[::-1].plot(x="feature", y="mean_abs_shap", kind="barh", legend=False)
-    plt.xlabel("Mean |SHAP value|")
-    plt.title(f"Top {top_k} SHAP Feature Importances\n{model_name} - {target}")
-    plt.tight_layout()
-    out_png_bar = os.path.join(results_dir, f"shap_bar_{task_name}_{model_name}_{target}_top{top_k}.png")
-    plt.savefig(out_png_bar, dpi=300, bbox_inches="tight")
-    plt.close()
-    print(f"SHAP bar (magnitude) saved: {out_png_bar}")
-
-    # ---------------------------
-    # (C) Signed SHAP (quick up/down view)
-    # ---------------------------
-    signed_mean = shap_matrix.mean(axis=0)
-    signed_df = pd.DataFrame({"feature": feature_names, "signed_mean_shap": signed_mean}).set_index("feature").loc[top_features].reset_index()
+    top_features = importance_df.head(top_k)["feature"].tolist()
+    signed_df = importance_df.set_index("feature").loc[top_features].reset_index()
 
     signed_csv = os.path.join(results_dir, f"shap_signed_mean_{task_name}_{model_name}_{target}.csv")
     signed_df.to_csv(signed_csv, index=False)
@@ -201,33 +158,101 @@ def run_shap_analysis(
 
     plt.figure(figsize=(8, 6))
     signed_df[::-1].plot(x="feature", y="signed_mean_shap", kind="barh", legend=False)
-    plt.axvline(0, linewidth=1)
+    plt.axvline(0, linewidth=1, color="black")
     plt.xlabel("Mean SHAP value (signed)")
-    plt.title(f"Top {top_k} SHAP (signed)\n{model_name} - {target}")
+    plt.title(f"Top {top_k} Signed SHAP\n{model_name} - {target}")
     plt.tight_layout()
-    out_png_signed = os.path.join(results_dir, f"shap_bar_signed_{task_name}_{model_name}_{target}_top{top_k}.png")
+    out_png_signed = os.path.join(results_dir, f"shap_bar_signed_{task_name}_{model_name}_{target}_top{top_k}.pdf")
     plt.savefig(out_png_signed, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"SHAP bar (signed) saved: {out_png_signed}")
 
     # ---------------------------
-    # (D) Linear models: back-projected coefficients (direction)
+    # Append top-k to global shap_results.csv
     # ---------------------------
-    coef_df = backproject_linear_coefs(model, feature_names)
-    if coef_df is not None:
-        out_coef_csv = os.path.join(results_dir, f"coefs_{task_name}_{model_name}_{target}.csv")
-        coef_df.to_csv(out_coef_csv, index=False)
-        print(f"Back-projected linear coefficients saved: {out_coef_csv}")
+    shap_results_path = os.path.join(results_dir, "shap_results.csv")
+    top = importance_df.head(top_k).copy()
+    top["task"] = task_name
+    top["model"] = model_name
+    top["target"] = target
 
-        # Bar chart for top-|coef| to mirror SHAP top_k
-        coef_top = coef_df.head(top_k).copy()
-        plt.figure(figsize=(8, 6))
-        coef_top[::-1].plot(x="feature", y="coef_orig", kind="barh", legend=False)
-        plt.axvline(0, linewidth=1)
-        plt.xlabel("Coefficient (original feature space)")
-        plt.title(f"Top {top_k} Linear Coefficients (signed)\n{model_name} - {target}")
-        plt.tight_layout()
-        out_coef_bar = os.path.join(results_dir, f"coefs_bar_{task_name}_{model_name}_{target}_top{top_k}.png")
-        plt.savefig(out_coef_bar, dpi=300, bbox_inches="tight") 
-        plt.close()
-        print(f"Coefficient bar saved: {out_coef_bar}")
+    if not os.path.exists(shap_results_path):
+        top.to_csv(shap_results_path, index=False)
+    else:
+        top.to_csv(shap_results_path, mode="a", header=False, index=False)
+
+    print(f"Appended top-{top_k} SHAP features to {shap_results_path}")
+
+    # ---------------------------
+    # Aggregated SHAP results → barplots + heatmaps
+    # ---------------------------
+    try:
+        df = pd.read_csv(shap_results_path)
+
+        # (A) Frequency barplot (unsigned)
+        K = 5
+        top_features_by_target = defaultdict(Counter)
+        for (task, model, target_), group in df.groupby(["task", "model", "target"]):
+            topk = group.sort_values("mean_abs_shap", ascending=False).head(K)
+            top_features_by_target[target_].update(topk["feature"])
+
+        records = []
+        for target_, counter in top_features_by_target.items():
+            for feature, count in counter.items():
+                records.append({"target": target_, "feature": feature, "count": count})
+
+        if records:
+            agg_df = pd.DataFrame(records)
+            plt.figure(figsize=(12,6))
+            sns.barplot(data=agg_df, x="feature", y="count", hue="target")
+            plt.xticks(rotation=45, ha="right")
+            plt.ylabel(f"Count of Times in Top-{K}")
+            plt.title(f"Top-{K} SHAP Features Across Models & Tasks")
+            plt.tight_layout()
+            plt.savefig(os.path.join(results_dir, "shap_topk_frequency.pdf"), dpi=300)
+            plt.close()
+
+        # (B) Heatmap unsigned
+        heatmap_df = (
+            df.groupby(["target", "feature"])["mean_abs_shap"]
+              .mean()
+              .reset_index()
+              .pivot(index="feature", columns="target", values="mean_abs_shap")
+              .fillna(0)
+        )
+        if not heatmap_df.empty:
+            plt.figure(figsize=(10,8))
+            sns.heatmap(heatmap_df, annot=True, fmt=".2f", cmap="YlGnBu")
+            plt.title("Average |SHAP| Importance per Feature and Target")
+            plt.ylabel("Feature")
+            plt.xlabel("Target")
+            plt.tight_layout()
+            plt.savefig(os.path.join(results_dir, "shap_importance_heatmap.pdf"), dpi=300)
+            plt.close()
+
+        # (C) Heatmap signed
+        signed_heatmap_df = (
+            df.groupby(["target", "feature"])["signed_mean_shap"]
+              .mean()
+              .reset_index()
+              .pivot(index="feature", columns="target", values="signed_mean_shap")
+              .fillna(0)
+        )
+        if not signed_heatmap_df.empty:
+            plt.figure(figsize=(10,8))
+            sns.heatmap(signed_heatmap_df, annot=True, fmt=".2f", center=0, cmap="RdBu_r")
+            plt.title("Average Signed SHAP Importance per Feature and Target")
+            plt.ylabel("Feature")
+            plt.xlabel("Target")
+            plt.tight_layout()
+            plt.savefig(os.path.join(results_dir, "shap_signed_importance_heatmap.pdf"), dpi=300)
+            plt.close()
+
+        print("Updated aggregated SHAP plots in results/:")
+        print(" - shap_topk_frequency.pdf")
+        print(" - shap_importance_heatmap.pdf")
+        print(" - shap_signed_importance_heatmap.pdf")
+
+    except Exception as e:
+        print(f"Warning: failed to update aggregated SHAP plots → {e}")
+

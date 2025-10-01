@@ -8,6 +8,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
+
 from src.svc_reader import read_all_svc_files
 from src.run_feature_extractor import run_feature_extraction
 from src.training_models import run_model, run_multioutput_model, run_separate_subscale_models
@@ -182,10 +183,7 @@ def main():
         results_dir = "results"
         os.makedirs(results_dir, exist_ok=True)
         summary_csv = os.path.join(results_dir, "model_summary.csv")  
-        pd.DataFrame(results).to_csv(summary_csv, index=False)
-        print(f"\n Summary of regression results saved to {summary_csv}")      
-            
-    
-if __name__ == "__main__":
-    main()    
-    
+               
+    if __name__ == "__main__":
+        main()    
+        
