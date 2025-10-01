@@ -182,8 +182,11 @@ def main():
     if results:
         results_dir = "results"
         os.makedirs(results_dir, exist_ok=True)
-        summary_csv = os.path.join(results_dir, "model_summary.csv")  
+        summary_csv = os.path.join(results_dir, "model_summary.csv")
+        pd.DataFrame(results).to_csv(summary_csv, index=False)
+        print(f"\n Summary of regression results saved to {summary_csv}")
+ 
                
-    if __name__ == "__main__":
+if __name__ == "__main__":
         main()    
         
