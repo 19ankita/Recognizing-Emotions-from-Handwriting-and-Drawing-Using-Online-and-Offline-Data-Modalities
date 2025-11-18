@@ -127,8 +127,7 @@ def train_single_task(task_name, data_root_override=None):
     engine = ProtoEngine(
         model=model,
         lr=1e-3,
-        device=args.device,
-        log_dir=task_log_dir
+        device=args.device
     )
     
     engine.tensorboard = args.tensorboard
