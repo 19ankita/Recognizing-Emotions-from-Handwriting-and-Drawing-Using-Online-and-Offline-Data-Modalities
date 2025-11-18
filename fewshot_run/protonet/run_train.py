@@ -153,20 +153,28 @@ def train_single_task(task_name, data_root_override=None):
         q_query=args.query,
         episodes_per_epoch=args.episodes
     )
+    
+    # Validation episodes are smaller because validation split is small
+    VAL_SHOT = 1
+    VAL_QUERY = 3
+
+    # Test episodes also smaller
+    TEST_SHOT = 1
+    TEST_QUERY = 5
 
     val_sampler = EpisodicSampler(
         labels=val_labels,
         n_way=args.way,
-        k_shot=args.shot,
-        q_query=args.query,
+        k_shot=VAL_SHOT,
+        q_query=VAL_QUERY,
         episodes_per_epoch=40
     )
 
     test_sampler = EpisodicSampler(
         labels=test_labels,
         n_way=args.way,
-        k_shot=args.shot,
-        q_query=args.query,
+        k_shot=TEST_SHOT,
+        q_query=TEST_QUERY,
         episodes_per_epoch=200
     )
 
