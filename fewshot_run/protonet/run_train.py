@@ -1,8 +1,7 @@
 import argparse
 import os
-import json
 import torch
-from torch.utils.data import DataLoader, Subset
+from torch.utils.data import DataLoader
 from torchvision.transforms import (
     Compose, ToTensor, Normalize,
     RandomRotation, RandomPerspective,
@@ -10,9 +9,6 @@ from torchvision.transforms import (
 )
 from torchvision.transforms.functional import resize as tv_resize
 import torch.nn.functional as F
-
-from sklearn.model_selection import train_test_split
-
 
 from protonet.data.emothaw_dataset import EMOTHAWDataset
 from protonet.data.episodic_sampler import EpisodicSampler
@@ -56,63 +52,30 @@ parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_availa
 
 args = parser.parse_args()
 
-###############################################
-# Split dataset into Train / Val / Test
-###############################################
-def split_emothaw(dataset, train_ratio=0.7, val_ratio=0.15):
-
-    total_indices = list(range(len(dataset)))
-    labels = [lbl for _, lbl in dataset.samples]
-
-    # Train vs temp (val+test)
-    train_idx, temp_idx = train_test_split(
-        total_indices, test_size=(1 - train_ratio), stratify=labels
-    )
-
-    temp_labels = [labels[i] for i in temp_idx]
-    val_size = val_ratio / (1 - train_ratio)   # e.g., 0.15 / 0.30 = 0.5
-
-    # Val vs Test
-    val_idx, test_idx = train_test_split(
-        temp_idx, test_size=(1 - val_size), stratify=temp_labels
-    )
-
-    return train_idx, val_idx, test_idx
-
 
 ###############################################
 # TRANSFORMS
 ###############################################
-if args.no_aug:
-    print("\n*** RUNNING WITHOUT DATA AUGMENTATION ***\n")
-    train_transform = Compose([
-        ToTensor(),
-        Normalize(mean=[0.5, 0.5, 0.5],
-                  std=[0.5, 0.5, 0.5]),
-    ])
-    result_root = "results_no_aug"
+def get_transforms(no_aug=False):
 
-else:
-    print("\n*** RUNNING WITH DATA AUGMENTATION ***\n")
-    train_transform = Compose([
-        RandomRotation(10),
-        RandomPerspective(distortion_scale=0.15, p=0.5),
-        ColorJitter(brightness=0.2, contrast=0.2),
-        GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
-        ToTensor(),
-        Normalize(mean=[0.5, 0.5, 0.5],
-                  std=[0.5, 0.5, 0.5]),
-    ])
-    result_root = "results_aug"
+    base_norm = Normalize(mean=[0.5, 0.5, 0.5],
+                          std=[0.5, 0.5, 0.5])
 
+    if no_aug:
+        return Compose([
+            ToTensor(),
+            base_norm,
+        ])
+    else:
+        return Compose([
+            RandomRotation(10),
+            RandomPerspective(distortion_scale=0.15, p=0.5),
+            ColorJitter(brightness=0.2, contrast=0.2),
+            GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
+            ToTensor(),
+            base_norm,
+        ])
 
-val_transform = Compose([
-    ToTensor(),
-    Normalize(mean=[0.5, 0.5, 0.5],
-              std=[0.5, 0.5, 0.5])
-])
-
-test_transform = val_transform
 
 def scale_if_large(img, max_size=512):
     """
@@ -141,8 +104,8 @@ def pad_collate(batch):
         processed.append(img)
 
     # find max height and width
-    max_h = max(img.shape[1] for img in images)
-    max_w = max(img.shape[2] for img in images)
+    max_h = max(img.shape[1] for img in processed)
+    max_w = max(img.shape[2] for img in processed)
 
     padded = []
     for img in processed:
@@ -171,31 +134,27 @@ def train_single_task(task_name, data_root_override=None):
 
     print(f"\n========== TRAINING TASK: {task_name} ==========")
     print(f"Dataset = {data_root}")
+    
+    # Transforms
+    train_transform = get_transforms(no_aug=args.no_aug)
+    val_test_transform = get_transforms(no_aug=True)
 
-    # Dataset
-    full_dataset = EMOTHAWDataset(data_root, transform=None)
-    
-    # Train/Val/Test split
-    train_idx, val_idx, test_idx = split_emothaw(full_dataset)
-    
-    # Build subsets with transforms
-    train_ds = Subset(EMOTHAWDataset(data_root, transform=train_transform), train_idx)
-    val_ds   = Subset(EMOTHAWDataset(data_root, transform=val_transform), val_idx)
-    test_ds  = Subset(EMOTHAWDataset(data_root, transform=test_transform), test_idx)
-    
-    # Labels for episodic sampling
-    train_labels = [full_dataset.samples[i][1] for i in train_idx]
-    val_labels   = [full_dataset.samples[i][1] for i in val_idx]
-    test_labels  = [full_dataset.samples[i][1] for i in test_idx]
+    # Load dataset FULL
+    full_dataset_train = EMOTHAWDataset(data_root, transform=train_transform)
+    full_dataset_valtest = EMOTHAWDataset(data_root, transform=val_test_transform)
+
+    # Labels for entire dataset
+    labels_all = [lbl for _, lbl in full_dataset_train.samples]
 
     # Samplers
     train_sampler = EpisodicSampler(
-        labels=train_labels,
+        labels=labels_all,
         n_way=args.way,
         k_shot=args.shot,
         q_query=args.query,
         episodes_per_epoch=args.episodes
     )
+    
     
     # Validation episodes are smaller because validation split is small
     VAL_SHOT = 1
@@ -206,7 +165,7 @@ def train_single_task(task_name, data_root_override=None):
     TEST_QUERY = 5
 
     val_sampler = EpisodicSampler(
-        labels=val_labels,
+        labels=labels_all,
         n_way=args.way,
         k_shot=VAL_SHOT,
         q_query=VAL_QUERY,
@@ -214,20 +173,27 @@ def train_single_task(task_name, data_root_override=None):
     )
 
     test_sampler = EpisodicSampler(
-        labels=test_labels,
+        labels=labels_all,
         n_way=args.way,
         k_shot=TEST_SHOT,
         q_query=TEST_QUERY,
         episodes_per_epoch=200
     )
 
+
     # Loaders
-    train_loader = DataLoader(train_ds, batch_sampler=train_sampler, collate_fn=pad_collate)
-    val_loader   = DataLoader(val_ds, batch_sampler=val_sampler, collate_fn=pad_collate)
-    test_loader  = DataLoader(test_ds, batch_sampler=test_sampler, collate_fn=pad_collate)
+    train_loader = DataLoader(full_dataset_train, 
+                              batch_sampler=train_sampler, 
+                              collate_fn=pad_collate)
+    val_loader   = DataLoader(full_dataset_valtest, 
+                              batch_sampler=val_sampler, 
+                              collate_fn=pad_collate)
+    test_loader  = DataLoader(full_dataset_valtest, 
+                              batch_sampler=test_sampler, 
+                              collate_fn=pad_collate)
 
     # Model
-    model = ProtoNet(x_dim=3, hid_dim=64, z_dim=256)
+    model = ProtoNet(x_dim=3, hid_dim=64, z_dim=128)
 
     # Engine 
     engine = ProtoEngine(
@@ -236,9 +202,10 @@ def train_single_task(task_name, data_root_override=None):
         device=args.device
     )
 
-    # Train
-    engine.train_task(
-        task_name=os.path.join(result_root, task_name),
+    # TRAIN -------------------------------------------------------------
+    history, exp_dir = engine.train_task(
+        task_name=("results_no_aug/" + task_name.upper()) if args.no_aug
+                   else ("results_aug/" + task_name.upper()),
         train_loader=train_loader,
         val_loader=val_loader,
         n_way=args.way,
@@ -246,17 +213,14 @@ def train_single_task(task_name, data_root_override=None):
         q_query=args.query,
         max_epochs=args.epochs
     )
-
-    # TEST
-    print(f"\n>>> Evaluating TEST set for task: {task_name.upper()}")
-    test_loss, test_acc = engine.evaluate(
+    # TEST --------------------------------------------------------------
+    print(f"\n>>> Running TEST episodes for {task_name.upper()}...")
+    engine.evaluate(
         test_loader=test_loader,
         n_way=args.way,
-        k_shot=args.shot,
-        q_query=args.query
+        k_shot=1,
+        q_query=5
     )
-
-    print(f"\n[Test Results for {task_name.upper()}] Loss={test_loss:.4f}, Acc={test_acc:.4f}\n")
 
 ###############################################
 # MODE 1 — Train ALL tasks
