@@ -259,3 +259,41 @@ class ProtoEngine:
         self._plot_curves(history)
 
         return history, self.exp_dir
+
+    # -------------------------------------------------------
+    # TEST EVALUATION (few-shot episodes)
+    # -------------------------------------------------------
+    def evaluate(self, test_loader, n_way, k_shot, q_query):
+
+        self.model.eval()
+        total_loss = 0
+        total_acc = 0
+        steps = 0
+
+        with torch.no_grad():
+            for batch in test_loader:
+                s_img, s_lbl, q_img, q_lbl = self._split_episode(
+                    batch, n_way, k_shot, q_query
+                )
+
+                s_emb = self.model(s_img)
+                q_emb = self.model(q_img)
+
+                loss, acc = prototypical_loss(s_emb, s_lbl, q_emb, q_lbl, n_way)
+
+                total_loss += loss.item()
+                total_acc += acc.item()
+                steps += 1
+
+        avg_loss = total_loss / steps
+        avg_acc = total_acc / steps
+
+        # Save test accuracy into trace.jsonl
+        self._log_trace({
+            "test_loss": avg_loss,
+            "test_acc": avg_acc
+        })
+
+        print(f"\n[Test Evaluation] Loss={avg_loss:.4f}, Acc={avg_acc:.4f}")
+
+        return avg_loss, avg_acc

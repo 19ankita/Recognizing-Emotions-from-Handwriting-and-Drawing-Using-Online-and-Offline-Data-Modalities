@@ -4,44 +4,40 @@ import torch.nn.functional as F
 
 
 class ConvBlock(nn.Module):
-    """A basic convolutional block: Conv → BN → ReLU → MaxPool"""
-
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.block = nn.Sequential(
+
+        self.layer = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(2)
+            nn.MaxPool2d(2)     # downsample by 2
         )
 
     def forward(self, x):
-        return self.block(x)
+        return self.layer(x)
 
 
 class ProtoNet(nn.Module):
     """
-    Prototypical Network with Conv4 backbone:
-    - Input: 3×128×128 RGB images (EMOTHAW)
-    - Output: embedding vectors (64-dim by default)
+    Improved Conv-4 few-shot backbone.
+    Used in miniImageNet, Omniglot, CIFAR-FS few-shot benchmarks.
     """
 
-    def __init__(self, x_dim=3, hid_dim=64, z_dim=64):
+    def __init__(self, x_dim=3, hid_dim=64, z_dim=256):
         super().__init__()
+
         self.encoder = nn.Sequential(
-            ConvBlock(x_dim, hid_dim),       # 64 × 64 × 64
-            ConvBlock(hid_dim, hid_dim),     # 64 × 32 × 32
-            ConvBlock(hid_dim, hid_dim),     # 64 × 16 × 16
-            ConvBlock(hid_dim, z_dim),       # 64 × 8 × 8
+            ConvBlock(x_dim, hid_dim),        # 64
+            ConvBlock(hid_dim, hid_dim),      # 64
+            ConvBlock(hid_dim, hid_dim * 2),  # 128
+            ConvBlock(hid_dim * 2, z_dim),    # 256
         )
 
     def forward(self, x):
-        """
-        Returns embedding vector for each sample.
-        Flattening is performed only at the end.
-        """
         x = self.encoder(x)
-        return x.view(x.size(0), -1)
+        x = torch.flatten(x, 1)
+        return x
 
 
 def compute_prototypes(embeddings, labels, n_way, k_shot):
