@@ -24,14 +24,14 @@ class ProtoNet(nn.Module):
     Used in miniImageNet, Omniglot, CIFAR-FS few-shot benchmarks.
     """
 
-    def __init__(self, x_dim=3, hid_dim=64, z_dim=256):
+    def __init__(self, x_dim=3, hid_dim=64, z_dim=128):
         super().__init__()
 
         self.encoder = nn.Sequential(
             ConvBlock(x_dim, hid_dim),        # 64
             ConvBlock(hid_dim, hid_dim),      # 64
             ConvBlock(hid_dim, hid_dim * 2),  # 128
-            ConvBlock(hid_dim * 2, z_dim),    # 256
+            ConvBlock(hid_dim * 2, z_dim),    # 128
         )
 
     def forward(self, x):

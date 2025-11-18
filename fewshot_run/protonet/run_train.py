@@ -8,6 +8,7 @@ from torchvision.transforms import (
     RandomRotation, RandomPerspective,
     ColorJitter, GaussianBlur
 )
+from torchvision.transforms.functional import resize as tv_resize
 import torch.nn.functional as F
 
 from sklearn.model_selection import train_test_split
@@ -113,25 +114,43 @@ val_transform = Compose([
 
 test_transform = val_transform
 
+def scale_if_large(img, max_size=512):
+    """
+    Downscale very large images while preserving aspect ratio.
+    """
+    _, h, w = img.shape
+    if max(h, w) > max_size:
+        scale = max_size / max(h, w)
+        new_h = int(h * scale)
+        new_w = int(w * scale)
+        img = tv_resize(img, [new_h, new_w])
+    return img
+
 def pad_collate(batch):
     """
-    Pads images in a batch to the size of the largest H and W.
-    Keeps aspect ratio (no resizing), avoids distortion.
+    - Scales very large images proportionally (if >512px)
+    - Pads images in a batch to the size of the largest H and W.
+    - Keeps aspect ratio (no resizing), avoids distortion.
     """
 
     images, labels = zip(*batch)
+    
+    processed = []
+    for img in images:
+        img = scale_if_large(img, max_size=512)
+        processed.append(img)
 
     # find max height and width
     max_h = max(img.shape[1] for img in images)
     max_w = max(img.shape[2] for img in images)
 
     padded = []
-    for img in images:
+    for img in processed:
         h, w = img.shape[1], img.shape[2]
         pad_h = max_h - h
         pad_w = max_w - w
 
-        img = F.pad(img, (0, pad_w, 0, pad_h), mode="constant", value=0)
+        img = F.pad(img, (0, pad_w, 0, pad_h))
         padded.append(img)
 
     return torch.stack(padded), torch.tensor(labels)
