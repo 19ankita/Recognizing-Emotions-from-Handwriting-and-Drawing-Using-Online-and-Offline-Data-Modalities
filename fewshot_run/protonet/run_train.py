@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 
+
 from protonet.data.emothaw_dataset import EMOTHAWDataset
 from protonet.data.episodic_sampler import EpisodicSampler
 from protonet.models.protonet import ProtoNet
@@ -40,9 +41,9 @@ parser.add_argument("--auto", action="store_true",
 parser.add_argument("--way", type=int, default=3, help="N-way")
 parser.add_argument("--shot", type=int, default=5, help="K-shot")
 parser.add_argument("--query", type=int, default=10, help="Query per class")
-parser.add_argument("--episodes", type=int, default=200,
+parser.add_argument("--episodes", type=int, default=20,
                     help="Episodes per epoch")
-parser.add_argument("--epochs", type=int, default=50,
+parser.add_argument("--epochs", type=int, default=10,
                     help="Training epochs")
 
 parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
