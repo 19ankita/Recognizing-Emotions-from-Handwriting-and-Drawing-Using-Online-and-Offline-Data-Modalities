@@ -8,8 +8,10 @@ from torchvision.transforms import (
     RandomRotation, RandomPerspective,
     ColorJitter, GaussianBlur
 )
+import torch.nn.functional as F
 
 from sklearn.model_selection import train_test_split
+
 
 from protonet.data.emothaw_dataset import EMOTHAWDataset
 from protonet.data.episodic_sampler import EpisodicSampler
@@ -111,6 +113,28 @@ val_transform = Compose([
 
 test_transform = val_transform
 
+def pad_collate(batch):
+    """
+    Pads images in a batch to the size of the largest H and W.
+    Keeps aspect ratio (no resizing), avoids distortion.
+    """
+
+    images, labels = zip(*batch)
+
+    # find max height and width
+    max_h = max(img.shape[1] for img in images)
+    max_w = max(img.shape[2] for img in images)
+
+    padded = []
+    for img in images:
+        h, w = img.shape[1], img.shape[2]
+        pad_h = max_h - h
+        pad_w = max_w - w
+
+        img = F.pad(img, (0, pad_w, 0, pad_h), mode="constant", value=0)
+        padded.append(img)
+
+    return torch.stack(padded), torch.tensor(labels)
 
 ###############################################
 # Training a single task
@@ -179,9 +203,9 @@ def train_single_task(task_name, data_root_override=None):
     )
 
     # Loaders
-    train_loader = DataLoader(train_ds, batch_sampler=train_sampler)
-    val_loader   = DataLoader(val_ds, batch_sampler=val_sampler)
-    test_loader  = DataLoader(test_ds, batch_sampler=test_sampler)
+    train_loader = DataLoader(train_ds, batch_sampler=train_sampler, collate_fn=pad_collate)
+    val_loader   = DataLoader(val_ds, batch_sampler=val_sampler, collate_fn=pad_collate)
+    test_loader  = DataLoader(test_ds, batch_sampler=test_sampler, collate_fn=pad_collate)
 
     # Model
     model = ProtoNet(x_dim=3, hid_dim=64, z_dim=256)
