@@ -1,13 +1,5 @@
 Individual task training:
-python run_train.py --task pentagon --auto --no_aug
+python run_train.py --task pentagon --auto 
 
 
-Custom dataset path:
-python run_train.py --train_all_tasks
 
-
-Train ALL tasks in one command:
-python run_train.py --train_all_tasks --auto
-
-Run WITHOUT augmentation
-!python run_train.py --train_all_tasks --no_aug

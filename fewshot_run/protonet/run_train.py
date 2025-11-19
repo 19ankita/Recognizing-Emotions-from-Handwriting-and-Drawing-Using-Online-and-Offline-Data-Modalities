@@ -80,6 +80,8 @@ def train_single_task(task_name, data_root_override=None):
 
     # Labels for entire dataset
     labels_all = [lbl for _, lbl in full_dataset.samples]
+    
+    print("Unique labels in dataset:", sorted(set(labels_all)))
 
     # Samplers
     train_sampler = EpisodicSampler(
