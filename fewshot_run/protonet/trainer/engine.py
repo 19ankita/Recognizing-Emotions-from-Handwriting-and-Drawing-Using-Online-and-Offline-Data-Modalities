@@ -98,27 +98,77 @@ class ProtoEngine:
         images = images.to(self.device)
         labels = labels.to(self.device)
 
-        support_idx, query_idx = [], []
+        print("\n========== EPISODE DEBUG ==========")
+        print(f"Raw episode labels: {labels.tolist()}")
+        print(f"Unique classes in episode: {torch.unique(labels).tolist()}")
 
-        for cls in range(n_way):
-            start = cls * (k_shot + q_query)
-            support_idx.extend(range(start, start + k_shot))
-            query_idx.extend(range(start + k_shot, start + k_shot + q_query))
+        # ---- group images by class (does NOT assume sorted dataset) ----
+        unique_classes = torch.unique(labels)
 
-        support_idx = torch.tensor(support_idx, device=self.device)
-        query_idx = torch.tensor(query_idx, device=self.device)
+        if len(unique_classes) != n_way:
+            print(f"[ERROR] Sampler produced {len(unique_classes)} classes but expected {n_way}")
+            raise ValueError("Sampler class mismatch")
 
-        support_images = images[support_idx]
-        query_images = images[query_idx]
-        support_labels = labels[support_idx]
+        support_images = []
+        support_labels = []
+        query_images = []
+        query_labels = []
 
-        uniq = support_labels.unique().tolist()
-        remap = {old: new for new, old in enumerate(uniq)}
+        for new_cls_id, original_class in enumerate(unique_classes):
 
-        support_labels = torch.tensor([remap[int(l)] for l in support_labels], device=self.device)
-        query_labels = torch.tensor([remap[int(labels[i])] for i in query_idx], device=self.device)
+            cls_mask = (labels == original_class).nonzero().squeeze()
+
+            # Print class size
+            print(f"\nClass {original_class.item()} → new label {new_cls_id}:")
+            print(f"  Indices available: {cls_mask.tolist()}")
+            print(f"  Count = {cls_mask.numel()}")
+
+            # Check minimum samples
+            required = k_shot + q_query
+            if cls_mask.numel() < required:
+                print(f"[ERROR] Class {original_class.item()} has only {cls_mask.numel()} samples; "
+                    f"requires {required}")
+                raise ValueError("Not enough samples per class in episode.")
+
+            # Select support/query indices
+            cls_indices = cls_mask[:required]
+            s_idx = cls_indices[:k_shot]
+            q_idx = cls_indices[k_shot:required]
+
+            print(f"  Support idx: {s_idx.tolist()}")
+            print(f"  Query idx:   {q_idx.tolist()}")
+
+            # Store images
+            support_images.append(images[s_idx])
+            query_images.append(images[q_idx])
+
+            # Labels must be remapped to 0..n_way-1
+            support_labels.append(torch.full((k_shot,), new_cls_id, device=self.device))
+            query_labels.append(torch.full((q_query,), new_cls_id, device=self.device))
+
+            # Debug: Print labels for support/query images
+            print(f"  Support labels: {[new_cls_id]*k_shot}")
+            print(f"  Query labels:   {[new_cls_id]*q_query}")
+
+        # Concatenate all classes
+        support_images = torch.cat(support_images, dim=0)
+        support_labels = torch.cat(support_labels, dim=0)
+        query_images = torch.cat(query_images, dim=0)
+        query_labels = torch.cat(query_labels, dim=0)
+
+        # VERIFICATION: Ensure no mismatched labels
+        print("\n-- Verification --")
+        print(f"Support labels final: {support_labels.tolist()}")
+        print(f"Query labels final:   {query_labels.tolist()}")
+
+        # Final shape checks
+        print(f"Support image shape: {support_images.shape}")
+        print(f"Query image shape:   {query_images.shape}")
+
+        print("========== END EPISODE DEBUG ==========\n")
 
         return support_images, support_labels, query_images, query_labels
+
 
     # -------------------------------------------------------
     # TRAIN TASK
