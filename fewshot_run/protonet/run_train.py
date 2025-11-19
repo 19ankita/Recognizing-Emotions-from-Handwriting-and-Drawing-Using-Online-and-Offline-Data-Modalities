@@ -2,13 +2,8 @@ import argparse
 import os
 import torch
 from torch.utils.data import DataLoader
-from torchvision.transforms import (
-    Compose, ToTensor, Normalize,
-    RandomRotation, RandomPerspective,
-    ColorJitter, GaussianBlur
-)
-from torchvision.transforms.functional import resize as tv_resize
-import torch.nn.functional as F
+from torchvision.transforms import Compose, Resize, ToTensor, Normalize
+
 
 from protonet.data.emothaw_dataset import EMOTHAWDataset
 from protonet.data.episodic_sampler import EpisodicSampler
@@ -26,9 +21,6 @@ EMOTHAW_TASKS = ["pentagon", "house", "cdt", "cursive_writing", "words"]
 # Parse arguments
 ###############################################
 parser = argparse.ArgumentParser()
-
-parser.add_argument("--no_aug", action="store_true",
-                    help="Disable data augmentation")
 
 parser.add_argument("--task", type=str, default=None,
                     help="EMOTHAW task: pentagon, house, cdt, cursive_writing, words")
@@ -53,28 +45,16 @@ parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_availa
 args = parser.parse_args()
 
 
-###############################################
-# TRANSFORMS
-###############################################
-def get_transforms(no_aug=False):
-
-    base_norm = Normalize(mean=[0.5, 0.5, 0.5],
-                          std=[0.5, 0.5, 0.5])
-
-    if no_aug:
-        return Compose([
-            ToTensor(),
-            base_norm,
-        ])
-    else:
-        return Compose([
-            RandomRotation(10),
-            RandomPerspective(distortion_scale=0.15, p=0.5),
-            ColorJitter(brightness=0.2, contrast=0.2),
-            GaussianBlur(kernel_size=3, sigma=(0.1, 1.0)),
-            ToTensor(),
-            base_norm,
-        ])
+# ============================================================
+# FIXED, CLEAN IMAGE TRANSFORMS (NO AUGMENTATION)
+# ============================================================
+def get_transforms():
+    return Compose([
+        Resize((224, 224)),              # FIXED SIZE   << important
+        ToTensor(),
+        Normalize(mean=[0.5, 0.5, 0.5],
+                  std=[0.5, 0.5, 0.5])
+    ])
 
 
 def scale_if_large(img, max_size=512):
@@ -89,34 +69,6 @@ def scale_if_large(img, max_size=512):
         img = tv_resize(img, [new_h, new_w])
     return img
 
-def pad_collate(batch):
-    """
-    - Scales very large images proportionally (if >512px)
-    - Pads images in a batch to the size of the largest H and W.
-    - Keeps aspect ratio (no resizing), avoids distortion.
-    """
-
-    images, labels = zip(*batch)
-    
-    processed = []
-    for img in images:
-        img = scale_if_large(img, max_size=512)
-        processed.append(img)
-
-    # find max height and width
-    max_h = max(img.shape[1] for img in processed)
-    max_w = max(img.shape[2] for img in processed)
-
-    padded = []
-    for img in processed:
-        h, w = img.shape[1], img.shape[2]
-        pad_h = max_h - h
-        pad_w = max_w - w
-
-        img = F.pad(img, (0, pad_w, 0, pad_h))
-        padded.append(img)
-
-    return torch.stack(padded), torch.tensor(labels)
 
 ###############################################
 # Training a single task
@@ -135,16 +87,14 @@ def train_single_task(task_name, data_root_override=None):
     print(f"\n========== TRAINING TASK: {task_name} ==========")
     print(f"Dataset = {data_root}")
     
-    # Transforms
-    train_transform = get_transforms(no_aug=args.no_aug)
-    val_test_transform = get_transforms(no_aug=True)
+    # Transform
+    transform = get_transforms()
 
     # Load dataset FULL
-    full_dataset_train = EMOTHAWDataset(data_root, transform=train_transform)
-    full_dataset_valtest = EMOTHAWDataset(data_root, transform=val_test_transform)
+    full_dataset = EMOTHAWDataset(data_root, transform=transform)
 
     # Labels for entire dataset
-    labels_all = [lbl for _, lbl in full_dataset_train.samples]
+    labels_all = [lbl for _, lbl in full_dataset.samples]
 
     # Samplers
     train_sampler = EpisodicSampler(
@@ -154,43 +104,34 @@ def train_single_task(task_name, data_root_override=None):
         q_query=args.query,
         episodes_per_epoch=args.episodes
     )
-    
-    
-    # Validation episodes are smaller because validation split is small
-    VAL_SHOT = 1
-    VAL_QUERY = 3
-
-    # Test episodes also smaller
-    TEST_SHOT = 1
-    TEST_QUERY = 5
 
     val_sampler = EpisodicSampler(
         labels=labels_all,
         n_way=args.way,
-        k_shot=VAL_SHOT,
-        q_query=VAL_QUERY,
+        k_shot=1,
+        q_query=5,
         episodes_per_epoch=40
     )
 
     test_sampler = EpisodicSampler(
         labels=labels_all,
         n_way=args.way,
-        k_shot=TEST_SHOT,
-        q_query=TEST_QUERY,
+        k_shot=1,
+        q_query=5,
         episodes_per_epoch=200
     )
 
 
     # Loaders
-    train_loader = DataLoader(full_dataset_train, 
-                              batch_sampler=train_sampler, 
-                              collate_fn=pad_collate)
-    val_loader   = DataLoader(full_dataset_valtest, 
-                              batch_sampler=val_sampler, 
-                              collate_fn=pad_collate)
-    test_loader  = DataLoader(full_dataset_valtest, 
-                              batch_sampler=test_sampler, 
-                              collate_fn=pad_collate)
+    train_loader = DataLoader(full_dataset, 
+                              batch_sampler=train_sampler) 
+
+    val_loader   = DataLoader(full_dataset, 
+                              batch_sampler=val_sampler) 
+
+    test_loader  = DataLoader(full_dataset, 
+                              batch_sampler=test_sampler) 
+
 
     # Model
     model = ProtoNet(x_dim=3, hid_dim=64, z_dim=128)
@@ -204,8 +145,7 @@ def train_single_task(task_name, data_root_override=None):
 
     # TRAIN -------------------------------------------------------------
     history, exp_dir = engine.train_task(
-        task_name=("results_no_aug/" + task_name.upper()) if args.no_aug
-                   else ("results_aug/" + task_name.upper()),
+        task_name=task_name,
         train_loader=train_loader,
         val_loader=val_loader,
         n_way=args.way,
@@ -222,32 +162,4 @@ def train_single_task(task_name, data_root_override=None):
         q_query=5
     )
 
-###############################################
-# MODE 1 — Train ALL tasks
-###############################################
-if args.train_all_tasks:
-    print("\n=== TRAINING ALL EMOTHAW TASKS ===")
-
-    for t in EMOTHAW_TASKS:
-        train_single_task(t)
-
-    print("\nAll tasks finished.\n")
-    exit(0)
-
-
-###############################################
-# MODE 2 — Train ONE task
-###############################################
-if args.task is not None:
-    train_single_task(args.task)
-    exit(0)
-
-if args.data_root is not None:
-    train_single_task("custom_task", data_root_override=args.data_root)
-    exit(0)
-
-
-###############################################
-# Nothing specified
-###############################################
-print("ERROR: You must specify either --task or --data_root or --train_all_tasks")
+train_single_task(args.task)
