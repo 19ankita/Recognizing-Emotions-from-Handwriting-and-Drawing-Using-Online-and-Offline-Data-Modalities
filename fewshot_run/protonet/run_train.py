@@ -4,7 +4,6 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 
-
 from protonet.data.emothaw_dataset import EMOTHAWDataset
 from protonet.data.episodic_sampler import EpisodicSampler
 from protonet.models.protonet import ProtoNet
@@ -15,6 +14,17 @@ from protonet.trainer.engine import ProtoEngine
 # Correct EMOTHAW task names (matching folder names)
 ###############################################
 EMOTHAW_TASKS = ["pentagon", "house", "cdt", "cursive_writing", "words"]
+
+# ============================================================
+# FIXED, CLEAN IMAGE TRANSFORMS (NO AUGMENTATION)
+# ============================================================
+def get_transforms():
+    return Compose([
+        Resize((224, 224)),              # FIXED SIZE   << important
+        ToTensor(),
+        Normalize(mean=[0.5, 0.5, 0.5],
+                  std=[0.5, 0.5, 0.5])
+    ])
 
 
 ###############################################
@@ -43,31 +53,6 @@ parser.add_argument("--epochs", type=int, default=100)
 parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
 
 args = parser.parse_args()
-
-
-# ============================================================
-# FIXED, CLEAN IMAGE TRANSFORMS (NO AUGMENTATION)
-# ============================================================
-def get_transforms():
-    return Compose([
-        Resize((224, 224)),              # FIXED SIZE   << important
-        ToTensor(),
-        Normalize(mean=[0.5, 0.5, 0.5],
-                  std=[0.5, 0.5, 0.5])
-    ])
-
-
-def scale_if_large(img, max_size=512):
-    """
-    Downscale very large images while preserving aspect ratio.
-    """
-    _, h, w = img.shape
-    if max(h, w) > max_size:
-        scale = max_size / max(h, w)
-        new_h = int(h * scale)
-        new_w = int(w * scale)
-        img = tv_resize(img, [new_h, new_w])
-    return img
 
 
 ###############################################
@@ -121,7 +106,6 @@ def train_single_task(task_name, data_root_override=None):
         episodes_per_epoch=200
     )
 
-
     # Loaders
     train_loader = DataLoader(full_dataset, 
                               batch_sampler=train_sampler) 
@@ -131,7 +115,6 @@ def train_single_task(task_name, data_root_override=None):
 
     test_loader  = DataLoader(full_dataset, 
                               batch_sampler=test_sampler) 
-
 
     # Model
     model = ProtoNet(x_dim=3, hid_dim=64, z_dim=128)
