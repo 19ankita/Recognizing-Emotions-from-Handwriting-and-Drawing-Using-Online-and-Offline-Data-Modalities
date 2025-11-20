@@ -98,10 +98,6 @@ class ProtoEngine:
         images = images.to(self.device)
         labels = labels.to(self.device)
 
-        print("\n========== EPISODE DEBUG ==========")
-        print(f"Raw episode labels: {labels.tolist()}")
-        print(f"Unique classes in episode: {torch.unique(labels).tolist()}")
-
         # ---- group images by class (does NOT assume sorted dataset) ----
         unique_classes = torch.unique(labels)
 
@@ -118,11 +114,6 @@ class ProtoEngine:
 
             cls_mask = (labels == original_class).nonzero().squeeze()
 
-            # Print class size
-            print(f"\nClass {original_class.item()} → new label {new_cls_id}:")
-            print(f"  Indices available: {cls_mask.tolist()}")
-            print(f"  Count = {cls_mask.numel()}")
-
             # Check minimum samples
             required = k_shot + q_query
             if cls_mask.numel() < required:
@@ -135,9 +126,6 @@ class ProtoEngine:
             s_idx = cls_indices[:k_shot]
             q_idx = cls_indices[k_shot:required]
 
-            print(f"  Support idx: {s_idx.tolist()}")
-            print(f"  Query idx:   {q_idx.tolist()}")
-
             # Store images
             support_images.append(images[s_idx])
             query_images.append(images[q_idx])
@@ -146,26 +134,11 @@ class ProtoEngine:
             support_labels.append(torch.full((k_shot,), new_cls_id, device=self.device))
             query_labels.append(torch.full((q_query,), new_cls_id, device=self.device))
 
-            # Debug: Print labels for support/query images
-            print(f"  Support labels: {[new_cls_id]*k_shot}")
-            print(f"  Query labels:   {[new_cls_id]*q_query}")
-
         # Concatenate all classes
         support_images = torch.cat(support_images, dim=0)
         support_labels = torch.cat(support_labels, dim=0)
         query_images = torch.cat(query_images, dim=0)
         query_labels = torch.cat(query_labels, dim=0)
-
-        # VERIFICATION: Ensure no mismatched labels
-        print("\n-- Verification --")
-        print(f"Support labels final: {support_labels.tolist()}")
-        print(f"Query labels final:   {query_labels.tolist()}")
-
-        # Final shape checks
-        print(f"Support image shape: {support_images.shape}")
-        print(f"Query image shape:   {query_images.shape}")
-
-        print("========== END EPISODE DEBUG ==========\n")
 
         return support_images, support_labels, query_images, query_labels
 
