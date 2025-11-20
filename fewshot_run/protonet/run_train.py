@@ -95,16 +95,16 @@ def train_single_task(task_name, data_root_override=None):
     val_sampler = EpisodicSampler(
         labels=labels_all,
         n_way=args.way,
-        k_shot=1,
-        q_query=5,
+        k_shot=args.shot,
+        q_query=args.query,
         episodes_per_epoch=40
     )
 
     test_sampler = EpisodicSampler(
         labels=labels_all,
         n_way=args.way,
-        k_shot=1,
-        q_query=5,
+        k_shot=args.shot,
+        q_query=args.query,
         episodes_per_epoch=200
     )
 
