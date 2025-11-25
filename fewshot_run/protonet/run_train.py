@@ -2,11 +2,15 @@ import argparse
 import os
 import torch
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, Resize, ToTensor, Normalize
+from torchvision.transforms import (
+    Compose, Resize, ToTensor, Normalize,
+    RandomRotation, ColorJitter, RandomAffine
+)
 
 from protonet.data.emothaw_dataset import EMOTHAWDataset
 from protonet.data.episodic_sampler import EpisodicSampler
 from protonet.models.protonet import ProtoNet
+from protonet.models.backbones import Conv6Backbone, Conv8Backbone, ResNet18Encoder
 from protonet.trainer.engine import ProtoEngine
 
 
@@ -15,15 +19,40 @@ from protonet.trainer.engine import ProtoEngine
 ###############################################
 EMOTHAW_TASKS = ["pentagon", "house", "cdt", "cursive_writing", "words"]
 
+# ------------------------------------------------------------
+# Compute dataset mean / std (cached)
+# ------------------------------------------------------------
+def compute_dataset_stats(dataset_root):
+    stats_file = os.path.join(dataset_root, "norm_stats.pt")
+    if os.path.exists(stats_file):
+        return torch.load(stats_file)
+
+    print("Computing dataset mean/std... (one-time)")
+    dataset = EMOTHAWDataset(dataset_root, transform=Compose([Resize((84, 84)), ToTensor()]))
+    imgs = torch.stack([img for img, _ in dataset], dim=0)
+    mean = imgs.mean(dim=[0, 2, 3])
+    std = imgs.std(dim=[0, 2, 3])
+    torch.save({"mean": mean, "std": std}, stats_file)
+    return {"mean": mean, "std": std}
+
 # ============================================================
 # FIXED, CLEAN IMAGE TRANSFORMS (NO AUGMENTATION)
 # ============================================================
-def get_transforms():
+def get_transforms(mean, std, augment=False):
+
+    aug = []
+    if augment:
+        aug = [
+            RandomRotation(10),
+            RandomAffine(10, translate=(0.05, 0.05)),
+            ColorJitter(brightness=0.1, contrast=0.1)
+        ]
+
     return Compose([
-        Resize((224, 224)),              # FIXED SIZE   << important
+        Resize((84, 84)),     # << CHANGED FROM 224→84
+        *aug,
         ToTensor(),
-        Normalize(mean=[0.5, 0.5, 0.5],
-                  std=[0.5, 0.5, 0.5])
+        Normalize(mean.tolist(), std.tolist())
     ])
 
 
@@ -54,6 +83,18 @@ parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_availa
 
 args = parser.parse_args()
 
+# ------------------------------------------------------------
+# Build encoder
+# ------------------------------------------------------------
+def build_encoder(encoder_name):
+    if encoder_name == "proto4":
+        return ProtoNet(x_dim=3, hid_dim=64, z_dim=128)
+    if encoder_name == "conv6":
+        return Conv6Backbone()
+    if encoder_name == "conv8":
+        return Conv8Backbone()
+    if encoder_name == "resnet18":
+        return ResNet18Encoder(output_dim=128)
 
 ###############################################
 # Training a single task
@@ -72,8 +113,11 @@ def train_single_task(task_name, data_root_override=None):
     print(f"\n========== TRAINING TASK: {task_name} ==========")
     print(f"Dataset = {data_root}")
     
-    # Transform
-    transform = get_transforms()
+    # Compute mean/std once
+    stats = compute_dataset_stats(data_root)
+    mean, std = stats["mean"], stats["std"]
+
+    transform = get_transforms(mean, std, augment=args.augment)
 
     # Load dataset FULL
     full_dataset = EMOTHAWDataset(data_root, transform=transform)
@@ -110,7 +154,8 @@ def train_single_task(task_name, data_root_override=None):
 
     # Loaders
     train_loader = DataLoader(full_dataset, 
-                              batch_sampler=train_sampler) 
+                              batch_sampler=train_sampler, 
+                              shuffle=False) 
 
     val_loader   = DataLoader(full_dataset, 
                               batch_sampler=val_sampler) 
@@ -119,7 +164,7 @@ def train_single_task(task_name, data_root_override=None):
                               batch_sampler=test_sampler) 
 
     # Model
-    model = ProtoNet(x_dim=3, hid_dim=64, z_dim=128)
+    model = build_encoder(args.encoder)
 
     # Engine 
     engine = ProtoEngine(

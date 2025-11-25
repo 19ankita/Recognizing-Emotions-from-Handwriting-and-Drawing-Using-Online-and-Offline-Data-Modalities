@@ -41,6 +41,8 @@ class ProtoEngine:
         self.model_file = os.path.join(base, "best_model.pt")
         self.plot_file = os.path.join(base, "plots.png")
         self.gpu_log = os.path.join(base, "gpu_mem.txt")
+        self.tsne_file = os.path.join(base, "tsne_embeddings.png")
+        self.proto_stats_file = os.path.join(base, "proto_stats.json")
 
         # TensorBoard folder
         self.writer = SummaryWriter(os.path.join(base, "tensorboard"))
@@ -112,17 +114,17 @@ class ProtoEngine:
 
         for new_cls_id, original_class in enumerate(unique_classes):
 
-            cls_mask = (labels == original_class).nonzero().squeeze()
+            idx = (labels == original_class).nonzero().squeeze()
 
             # Check minimum samples
             required = k_shot + q_query
-            if cls_mask.numel() < required:
-                print(f"[ERROR] Class {original_class.item()} has only {cls_mask.numel()} samples; "
+            if idx.numel() < required:
+                print(f"[ERROR] Class {original_class.item()} has only {idx.numel()} samples; "
                     f"requires {required}")
                 raise ValueError("Not enough samples per class in episode.")
 
             # Select support/query indices
-            cls_indices = cls_mask[:required]
+            cls_indices = idx[:required]
             s_idx = cls_indices[:k_shot]
             q_idx = cls_indices[k_shot:required]
 
@@ -142,37 +144,75 @@ class ProtoEngine:
 
         return support_images, support_labels, query_images, query_labels
 
+# -------------------------------------------------------
+    # Prototype visualization using TSNE
+    # -------------------------------------------------------
+    def _visualize_tsne(self, embeddings, labels, prototypes):
+        """
+        embeddings: (num_samples, dim)
+        labels: (num_samples)
+        prototypes: (n_way, dim)
+        """
+        all_points = np.concatenate([embeddings, prototypes], axis=0)
+
+        tsne = TSNE(n_components=2, perplexity=20, learning_rate="auto")
+        points_2d = tsne.fit_transform(all_points)
+
+        emb_2d = points_2d[:-len(prototypes)]
+        proto_2d = points_2d[-len(prototypes):]
+
+        plt.figure(figsize=(8, 6))
+        num_classes = len(prototypes)
+
+        for c in range(num_classes):
+            cls_mask = (labels == c)
+            plt.scatter(
+                emb_2d[cls_mask, 0],
+                emb_2d[cls_mask, 1],
+                label=f"Class {c}", alpha=0.6
+            )
+
+        # Plot prototypes as stars
+        plt.scatter(
+            proto_2d[:, 0], proto_2d[:, 1],
+            color="black", marker="*", s=300, label="Prototypes"
+        )
+
+        plt.legend()
+        plt.title("TSNE Visualization of Embeddings + Prototypes")
+        plt.savefig(self.tsne_file)
+        plt.close()
+
 
     # -------------------------------------------------------
-    # TRAIN TASK
+    # Train task
     # -------------------------------------------------------
     def train_task(self, task_name, train_loader, val_loader,
-                   n_way=3, k_shot=5, q_query=10,
-                   max_epochs=60):
+                   n_way=3, k_shot=5, q_query=10, max_epochs=60):
 
         self._init_experiment(task_name)
-        history = {"train_loss": [], "train_acc": [],
-                   "val_loss": [], "val_acc": []}
+        history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
 
-        print(f"\n========== TRAINING TASK: {task_name.upper()} ==========\n")
+        print(f"\n========== TRAINING: {task_name.upper()} ==========")
         start_time = time.time()
 
-        for epoch in range(1, max_epochs + 1):
+        final_support_embs = []
+        final_support_lbls = []
+        final_query_embs = []
+        final_query_lbls = []
 
+        for epoch in range(1, max_epochs + 1):
             epoch_start = time.time()
 
-            # ------------------------
-            # TRAINING
-            # ------------------------
+            # --------------------
+            # TRAIN
+            # --------------------
             self.model.train()
             train_loss = 0
             train_acc = 0
             steps = 0
 
-            train_bar = tqdm(train_loader, desc=f"[{task_name}] Epoch {epoch}/{max_epochs} TRAIN",
-                             leave=False)
-
-            for batch in train_bar:
+            for batch in tqdm(train_loader, desc=f"[TRAIN Epoch {epoch}]"):
                 s_img, s_lbl, q_img, q_lbl = self._split_episode(batch, n_way, k_shot, q_query)
 
                 self.optimizer.zero_grad()
@@ -180,7 +220,6 @@ class ProtoEngine:
                 q_emb = self.model(q_img)
 
                 loss, acc = prototypical_loss(s_emb, s_lbl, q_emb, q_lbl, n_way)
-
                 loss.backward()
                 self.optimizer.step()
 
@@ -188,24 +227,18 @@ class ProtoEngine:
                 train_acc += acc.item()
                 steps += 1
 
-                train_bar.set_postfix(loss=loss.item(), acc=acc.item())
-
             train_loss /= steps
             train_acc /= steps
 
-            # ------------------------
-            # VALIDATION
-            # ------------------------
+            # --------------------
+            # VAL
+            # --------------------
             self.model.eval()
-            val_loss = 0
-            val_acc = 0
+            val_loss, val_acc = 0, 0
             vsteps = 0
 
-            val_bar = tqdm(val_loader, desc=f"[{task_name}] Epoch {epoch}/{max_epochs} VAL",
-                           leave=False)
-
             with torch.no_grad():
-                for batch in val_bar:
+                for batch in tqdm(val_loader, desc=f"[VAL Epoch {epoch}]"):
                     s_img, s_lbl, q_img, q_lbl = self._split_episode(batch, n_way, k_shot, q_query)
 
                     s_emb = self.model(s_img)
@@ -217,20 +250,22 @@ class ProtoEngine:
                     val_acc += acc.item()
                     vsteps += 1
 
-                    val_bar.set_postfix(loss=loss.item(), acc=acc.item())
+                    # store last epoch embeddings for TSNE
+                    if epoch == max_epochs:
+                        final_support_embs.append(s_emb.cpu())
+                        final_support_lbls.append(s_lbl.cpu())
+                        final_query_embs.append(q_emb.cpu())
+                        final_query_lbls.append(q_lbl.cpu())
 
             val_loss /= vsteps
             val_acc /= vsteps
 
-            # ------------------------
-            # LOGGING
-            # ------------------------
+            # Logging
             history["train_loss"].append(train_loss)
             history["train_acc"].append(train_acc)
             history["val_loss"].append(val_loss)
             history["val_acc"].append(val_acc)
 
-            # JSON trace
             self._log_trace({
                 "epoch": epoch,
                 "train_loss": train_loss,
@@ -239,55 +274,78 @@ class ProtoEngine:
                 "val_acc": val_acc
             })
 
-            # CSV
-            with open(self.csv_file, "a", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow([epoch, train_loss, train_acc, "train"])
-                writer.writerow([epoch, val_loss, val_acc, "val"])
-
-            # TensorBoard
             self.writer.add_scalar("loss/train", train_loss, epoch)
             self.writer.add_scalar("loss/val", val_loss, epoch)
             self.writer.add_scalar("acc/train", train_acc, epoch)
             self.writer.add_scalar("acc/val", val_acc, epoch)
 
-            # GPU memory log
-            self._log_gpu_memory(epoch)
-
-            # ------------------------
-            # ETA CALCULATION
-            # ------------------------
-            epoch_time = time.time() - epoch_start
-            elapsed = time.time() - start_time
-            remaining = (max_epochs - epoch) * epoch_time
-            finish_time = datetime.now() + timedelta(seconds=remaining)
-
-            print(f"\n----- {task_name.upper()} Epoch {epoch}/{max_epochs} -----")
-            print(f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.4f}")
-            print(f"Val Loss:   {val_loss:.4f} | Val Acc:   {val_acc:.4f}")
-            print(f"Epoch Time: {epoch_time/60:.2f} min")
-            print(f"Elapsed:    {elapsed/60:.2f} min")
-            print(f"ETA:        {remaining/60:.2f} min (~{finish_time.strftime('%Y-%m-%d %H:%M:%S')})")
-
-            # ------------------------
-            # SAVE BEST MODEL
-            # ------------------------
+            # Save best
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
                 torch.save(self.model.state_dict(), self.model_file)
-                print(f"Saved best model (val_loss={val_loss:.4f})")
 
-        # After all epochs
-        print(f"\n>>> FINISHED TASK: {task_name.upper()}")
+            self._log_gpu_memory(epoch)
+
+            print(f"\nEpoch {epoch}/{max_epochs}")
+            print(f"Train Loss {train_loss:.4f}, Train Acc {train_acc:.4f}")
+            print(f"Val Loss   {val_loss:.4f}, Val Acc   {val_acc:.4f}")
+
+        # Plot curves
         self._plot_curves(history)
+
+        # -------------------------
+        # TSNE + PROTOTYPES
+        # -------------------------
+        self._create_embedding_visualization(
+            final_support_embs, final_support_lbls,
+            final_query_embs, final_query_lbls,
+            n_way
+        )
 
         return history, self.exp_dir
 
+
     # -------------------------------------------------------
-    # TEST EVALUATION (few-shot episodes)
+    # Create TSNE plot + prototype separability stats
+    # -------------------------------------------------------
+    def _create_embedding_visualization(self, s_embs, s_lbls, q_embs, q_lbls, n_way):
+        if len(s_embs) == 0:
+            return
+
+        s_embs = torch.cat(s_embs).numpy()
+        q_embs = torch.cat(q_embs).numpy()
+        s_lbls = torch.cat(s_lbls).numpy()
+        q_lbls = torch.cat(q_lbls).numpy()
+
+        # Compute prototypes
+        prototypes = []
+        for c in range(n_way):
+            cls_mask = (s_lbls == c)
+            proto = s_embs[cls_mask].mean(axis=0)
+            prototypes.append(proto)
+        prototypes = np.stack(prototypes)
+
+        # Run TSNE
+        all_embs = np.concatenate([s_embs, q_embs], axis=0)
+        all_lbls = np.concatenate([s_lbls, q_lbls], axis=0)
+
+        self._visualize_tsne(all_embs, all_lbls, prototypes)
+
+        # Compute distances
+        dists = {}
+        for i in range(n_way):
+            for j in range(i + 1, n_way):
+                dist = np.linalg.norm(prototypes[i] - prototypes[j])
+                dists[f"{i}-{j}"] = float(dist)
+
+        with open(self.proto_stats_file, "w") as f:
+            json.dump({"prototype_distances": dists}, f, indent=2)
+
+
+    # -------------------------------------------------------
+    # TEST evaluation
     # -------------------------------------------------------
     def evaluate(self, test_loader, n_way, k_shot, q_query):
-
         self.model.eval()
         total_loss = 0
         total_acc = 0
@@ -295,13 +353,9 @@ class ProtoEngine:
 
         with torch.no_grad():
             for batch in test_loader:
-                s_img, s_lbl, q_img, q_lbl = self._split_episode(
-                    batch, n_way, k_shot, q_query
-                )
-
+                s_img, s_lbl, q_img, q_lbl = self._split_episode(batch, n_way, k_shot, q_query)
                 s_emb = self.model(s_img)
                 q_emb = self.model(q_img)
-
                 loss, acc = prototypical_loss(s_emb, s_lbl, q_emb, q_lbl, n_way)
 
                 total_loss += loss.item()
@@ -311,12 +365,7 @@ class ProtoEngine:
         avg_loss = total_loss / steps
         avg_acc = total_acc / steps
 
-        # Save test accuracy into trace.jsonl
-        self._log_trace({
-            "test_loss": avg_loss,
-            "test_acc": avg_acc
-        })
-
-        print(f"\n[Test Evaluation] Loss={avg_loss:.4f}, Acc={avg_acc:.4f}")
+        self._log_trace({"test_loss": avg_loss, "test_acc": avg_acc})
+        print(f"\n[Test] Loss={avg_loss:.4f}, Acc={avg_acc:.4f}")
 
         return avg_loss, avg_acc

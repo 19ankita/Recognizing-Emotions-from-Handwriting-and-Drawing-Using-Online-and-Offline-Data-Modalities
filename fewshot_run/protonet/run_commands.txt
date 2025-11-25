@@ -1,5 +1,9 @@
 Individual task training:
 python run_train.py --task pentagon --auto 
 
+Train with augmentation and ResNet-18:
+python run_train.py --task pentagon --encoder resnet18 --augment
+
+
 
 
