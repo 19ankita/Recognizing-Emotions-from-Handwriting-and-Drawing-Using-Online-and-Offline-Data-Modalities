@@ -73,6 +73,9 @@ parser.add_argument("--train_all_tasks", action="store_true",
 parser.add_argument("--auto", action="store_true",
                     help="Automatically apply good defaults")
 
+parser.add_argument("--encoder", type=str, default="proto4",
+                    choices=["proto4", "conv6", "conv8", "resnet18"])
+
 parser.add_argument("--way", type=int, default=3)
 parser.add_argument("--shot", type=int, default=5)
 parser.add_argument("--query", type=int, default=15)
