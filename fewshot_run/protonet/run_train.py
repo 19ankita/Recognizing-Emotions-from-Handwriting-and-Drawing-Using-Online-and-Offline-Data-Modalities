@@ -67,11 +67,7 @@ parser.add_argument("--task", type=str, default=None,
 parser.add_argument("--data_root", type=str, default=None,
                     help="Custom dataset root instead of --task")
 
-parser.add_argument("--train_all_tasks", action="store_true",
-                    help="Train all EMOTHAW tasks sequentially")
-
-parser.add_argument("--auto", action="store_true",
-                    help="Automatically apply good defaults")
+parser.add_argument("--augment", action="store_true")
 
 parser.add_argument("--encoder", type=str, default="proto4",
                     choices=["proto4", "conv6", "conv8", "resnet18"])
