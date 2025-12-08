@@ -1,0 +1,10 @@
+train_dir: "data/train"
+val_dir: "data/val"
+
+img_size: 224
+batch_size: 32
+num_workers: 4
+
+epochs: 20
+lr: 0.001
+freeze_backbone: true

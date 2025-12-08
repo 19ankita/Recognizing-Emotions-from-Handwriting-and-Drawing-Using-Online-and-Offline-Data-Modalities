@@ -1,0 +1,89 @@
+# EMOTHAW – ResNet18 Transfer Learning with Data Augmentation
+
+This repository contains a full PyTorch pipeline for training a ResNet-18 model on the EMOTHAW handwriting & drawing dataset using transfer learning and aggressive data augmentation techniques designed for sketch-based emotion recognition.
+
+## Features
+- ResNet-18 (ImageNet pretrained)
+- Transfer learning (freeze or fine-tune backbone)
+- Handwriting-specific augmentations:
+  - RandomAffine, Perspective, Cutout, ColorJitter, ResizedCrop
+- Config-driven training
+- Modular folder structure
+- Easy inference on new images
+
+## Folder Structure
+
+src/ # Python modules (dataset, model, train, utils, inference)
+configs/ # YAML config files
+experiments/ # Saved logs + checkpoints
+notebooks/ # Jupyter notebooks
+outputs/ # Metrics, logs, etc.
+
+## How to Run Training
+pip install -r requirements.txt
+python src/train.py --config configs/default.yaml
+
+## Inference Example
+python src/inference.py --image path/to/image.jpg --checkpoint outputs/best_model.pth
+
+
+## Requirements
+See `requirements.txt`
+
+---^
+## ResNet-18 Transfer Learning Diagram
+                             ┌───────────────────────────────────────────┐
+                             │        Input Image (224 × 224 × 3)        │
+                             └───────────────────────────────────────────┘
+                                              │
+                                              ▼
+                     ┌──────────────────────────────────────────────────────────┐
+                     │        Pretrained ResNet-18 (ImageNet Weights)          │
+                     │   (Convolution + BN + ReLU + Residual Blocks × 4)       │
+                     └──────────────────────────────────────────────────────────┘
+                                              │
+                    (Optional: Freeze Backbone Parameters for Transfer Learning)
+                                              │
+                                              ▼
+         ┌──────────────────────────────────────────────────────────────────────────┐
+         │                        Global Average Pooling Layer                      │
+         │                       Output tensor: 512-dimensional                     │
+         └──────────────────────────────────────────────────────────────────────────┘
+                                              │
+                                              ▼
+             ┌────────────────────────────────────────────────────────────┐
+             │      Fully Connected Classifier (replaced by you)          │
+             │      Original: 1000 classes → New: N Emotion Classes       │
+             │                                                            │
+             │      FC: Linear(512 → N_classes)                           │
+             └────────────────────────────────────────────────────────────┘
+                                              │
+                                              ▼
+                           ┌────────────────────────────────────┐
+                           │         Softmax Probabilities       │
+                           │     (Predicted Emotion Category)    │
+                           └────────────────────────────────────┘
+
+
+## Data Augmentation Pipeline
+
+                ┌─────────────────┐
+                │   Raw Image     │
+                └─────────────────┘
+                          │
+                          ▼
+     ┌─────────────────────────────────────────────────────────────┐
+     │                  Data Augmentation Pipeline                  │
+     │--------------------------------------------------------------│
+     │ RandomResizedCrop(224)                                       │
+     │ RandomHorizontalFlip                                         │
+     │ RandomRotation(10°)                                          │
+     │ RandomAffine(shear=10)                                       │
+     │ RandomPerspective                                            │
+     │ ColorJitter                                                  │
+     │ Cutout(mask_length=40)                                      │
+     │ ToTensor + Normalize                                         │
+     └─────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+                   →  Model Input
