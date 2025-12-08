@@ -1,0 +1,9 @@
+task_dir: "data/emothaw_tasks/words"
+
+val_ratio: 0.2
+batch_size: 32
+num_workers: 2
+img_size: 224
+epochs: 20
+freeze_backbone: true
+lr: 0.001
