@@ -20,8 +20,8 @@ notebooks/ # Jupyter notebooks
 outputs/ # Metrics, logs, etc.
 
 ## How to Run Training
-pip install -r requirements.txt
-python src/train.py --config configs/default.yaml
+- pip install -r requirements.txt
+- python src/train.py --config configs/default.yaml
 
 ## Inference Example
 python src/inference.py --image path/to/image.jpg --checkpoint outputs/best_model.pth
