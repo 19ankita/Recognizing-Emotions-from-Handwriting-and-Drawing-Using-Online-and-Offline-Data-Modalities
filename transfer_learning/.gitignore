@@ -1,6 +1,6 @@
-outputs/*.json
-*.pth
-*.pt
+#outputs/*.json
+#*.pth
+#*.pt
 __pycache__/
 .ipynb_checkpoints/
 .DS_Store
