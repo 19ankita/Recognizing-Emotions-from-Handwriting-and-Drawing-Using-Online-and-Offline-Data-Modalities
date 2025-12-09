@@ -119,6 +119,9 @@ def run_train(config_path):
         history["train_acc"].append(train_acc)
         history["val_acc"].append(val_acc)
         
+        current_lr = optimizer.param_groups[0]["lr"]
+        history.setdefault("lr", []).append(current_lr)
+
         # Update scheduler
         scheduler.step(val_loss)
         
