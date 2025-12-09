@@ -79,6 +79,30 @@ def run_train(config_path):
     # Training loop
     for epoch in range(cfg["epochs"]):
         print(f"\n==== Epoch {epoch+1}/{cfg['epochs']} ====")
+        
+        # -------------------------
+        # PHASE SWITCH: Unfreeze Backbone
+        # -------------------------
+        if epoch == 10:   # Unfreeze at epoch 10 (adjust if needed)
+            print("\n>>> Unfreezing backbone for fine-tuning...")
+
+            # Unfreeze all layers
+            model.requires_grad_(True)
+
+            # Rebuild optimizer for full model
+            optimizer = optim.AdamW(
+                model.parameters(),
+                lr=1e-5,              # LOWER LR for fine-tuning
+                weight_decay=1e-4
+            )
+
+            # Rebuild scheduler for second stage
+            scheduler = get_scheduler(
+                optimizer,
+                warmup_epochs=0,
+                total_epochs=cfg["epochs"] - epoch
+            )
+
 
         # -----------------
         # Training phase
