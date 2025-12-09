@@ -24,9 +24,7 @@ def get_transforms(cfg):
         A.GridDistortion(num_steps=5, distort_limit=0.2, p=0.3),
         A.Perspective(scale=(0.02, 0.05), p=0.3),
         A.RandomBrightnessContrast(0.1, 0.1, p=0.5),
-        A.Cutout(
-            num_holes=2, max_h_size=img_size//8, max_w_size=img_size//8, p=0.5
-        ),
+        A.CoarseDropout(max_holes=2, max_height=img_size//8, max_width=img_size//8, p=0.5),
         A.Resize(img_size, img_size),
         A.Normalize(mean, std),
         ToTensorV2()

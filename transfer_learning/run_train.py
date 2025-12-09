@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 # Printing sample images from dataloader
 # ------------------------------------------------------------
 
-def show_batch(loader):
+def show_batch(loader, output=None):
     
     if output is None:
         output = os.path.join("outputs", "aug_img.png")
