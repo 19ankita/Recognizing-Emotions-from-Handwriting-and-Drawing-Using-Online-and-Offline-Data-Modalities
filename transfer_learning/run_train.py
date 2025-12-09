@@ -41,7 +41,7 @@ def run_train(config_path):
 
     # Learning rate scheduler
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=3, verbose=True
+        optimizer, mode="min", factor=0.5, patience=3
     )
 
     # Mixed precision training (AMP)
@@ -121,6 +121,10 @@ def run_train(config_path):
         
         # Update scheduler
         scheduler.step(val_loss)
+        
+        for param_group in optimizer.param_groups:
+            print("Current LR:", param_group["lr"])
+
 
         # Save best checkpoint
         if val_acc > best_acc:
