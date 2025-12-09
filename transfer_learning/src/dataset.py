@@ -25,52 +25,67 @@ class Cutout(object):
         mask = torch.from_numpy(mask).expand_as(img)
         return img * mask
 
+    def get_transforms(cfg):
+        img_size = cfg["img_size"]
 
-def get_transforms(cfg):
-    img_size = cfg["img_size"]
+        # ImageNet normalization (required for ResNet)
+        mean = [0.485, 0.456, 0.406]
+        std  = [0.229, 0.224, 0.225]
 
-    # train_tf = transforms.Compose([
-    #     transforms.RandomResizedCrop(img_size, scale=(0.90, 1.0)),
-        
-    #     transforms.RandomHorizontalFlip(p=0.2),
-        
-    #     transforms.RandomRotation(5),
-        
-    #     #transforms.RandomAffine(degrees=0, 
-    #                             #translate=(0.08, 0.08),
-    #                             #shear=5),
+        train_tf = transforms.Compose([
+            transforms.Resize((img_size, img_size)),
+            transforms.RandomHorizontalFlip(p=0.3),
+            transforms.RandomRotation(5),
+            transforms.ColorJitter(brightness=0.1, contrast=0.1),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
 
-    #     transforms.ColorJitter(brightness=0.10,
-    #                            contrast=0.10),
+        val_tf = transforms.Compose([
+            transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std)
+        ])
+
+        return train_tf, val_tf
+
+
+# def get_transforms(cfg):
+#     img_size = cfg["img_size"]
+
+#     # train_tf = transforms.Compose([
+#     #     transforms.RandomResizedCrop(img_size, scale=(0.90, 1.0)),
         
-    #     transforms.ToTensor(),
+#     #     transforms.RandomHorizontalFlip(p=0.2),
         
-    #     Cutout(n_holes=1, length=12),
+#     #     transforms.RandomRotation(5),
         
-    #     transforms.Normalize([0.485, 0.456, 0.406],
-    #                          [0.229, 0.224, 0.225])
-    # ])
+#     #     #transforms.RandomAffine(degrees=0, 
+#     #                             #translate=(0.08, 0.08),
+#     #                             #shear=5),
+
+#     #     transforms.ColorJitter(brightness=0.10,
+#     #                            contrast=0.10),
+        
+#     #     transforms.ToTensor(),
+        
+#     #     Cutout(n_holes=1, length=12),
+        
+#     #     transforms.Normalize([0.485, 0.456, 0.406],
+#     #                          [0.229, 0.224, 0.225])
+#     # ])
     
-    train_tf = transforms.Compose([
-        transforms.Resize((img_size, img_size)),
-        transforms.RandomHorizontalFlip(p=0.3),
-        transforms.RandomRotation(5),
-        transforms.ColorJitter(brightness=0.1, contrast=0.1),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std)
-])
 
+#     val_tf = transforms.Compose([
+#         transforms.Resize(int(img_size * 1.05)),
+#         transforms.CenterCrop(img_size),
+#         transforms.ToTensor(),
+#         transforms.Normalize(
+#                             mean=[0.485, 0.456, 0.406],
+#                             std=[0.229, 0.224, 0.225])
+#     ])
 
-    val_tf = transforms.Compose([
-        transforms.Resize(int(img_size * 1.05)),
-        transforms.CenterCrop(img_size),
-        transforms.ToTensor(),
-        transforms.Normalize(
-                            mean=[0.485, 0.456, 0.406],
-                            std=[0.229, 0.224, 0.225])
-    ])
-
-    return train_tf, val_tf
+#     return train_tf, val_tf
 
 
 def get_dataloaders(cfg):
