@@ -50,31 +50,47 @@ def get_transforms(cfg):
     # -------------------------------
     # STRONG TRAIN AUGMENTATION
     # -------------------------------
+    # train_tf = transforms.Compose([
+    #     transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),
+    #     transforms.RandomHorizontalFlip(p=0.5),
+
+    #     # Powerful augmentation from Google Brain
+    #     RandAugment(num_ops=2, magnitude=9),
+
+    #     transforms.RandomAffine(
+    #         degrees=10,
+    #         translate=(0.08, 0.08),
+    #         shear=8
+    #     ),
+
+    #     transforms.ColorJitter(
+    #         brightness=0.2,
+    #         contrast=0.2,
+    #         saturation=0.2
+    #     ),
+
+    #     transforms.ToTensor(),
+    #     transforms.Normalize(mean, std),
+
+    #     # Additional regularization
+    #     Cutout(n_holes=1, length=20)
+    # ])
+    
     train_tf = transforms.Compose([
-        transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),
-        transforms.RandomHorizontalFlip(p=0.5),
+    transforms.RandomResizedCrop(img_size, scale=(0.6, 1.0)),
+    transforms.RandomRotation(10),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomAffine(
+        degrees=0,
+        translate=(0.1, 0.1),
+        shear=10
+    ),
+    transforms.ColorJitter(contrast=0.3, brightness=0.2),
+    transforms.ToTensor(),
+    Cutout(n_holes=1, length=24),
+    transforms.Normalize(mean, std)
+])
 
-        # Powerful augmentation from Google Brain
-        RandAugment(num_ops=2, magnitude=9),
-
-        transforms.RandomAffine(
-            degrees=10,
-            translate=(0.08, 0.08),
-            shear=8
-        ),
-
-        transforms.ColorJitter(
-            brightness=0.2,
-            contrast=0.2,
-            saturation=0.2
-        ),
-
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std),
-
-        # Additional regularization
-        Cutout(n_holes=1, length=20)
-    ])
 
     # -------------------------------
     # Validation transforms (clean)

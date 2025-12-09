@@ -12,6 +12,29 @@ from src.dataset import get_dataloaders
 from src.model import build_resnet18
 from src.utils import accuracy, save_checkpoint
 
+import matplotlib.pyplot as plt
+
+# ------------------------------------------------------------
+# Printing sample images from dataloader
+# ------------------------------------------------------------
+def show_samples(train_loader, mean, std):
+
+    images, labels = next(iter(train_loader))
+
+    # Unnormalize
+    imgs = images.clone()
+    for i in range(3):
+        imgs[:, i, :, :] = imgs[:, i, :, :] * std[i] + mean[i]
+
+    imgs = imgs.permute(0, 2, 3, 1).cpu().numpy()
+
+    fig, axs = plt.subplots(2, 4, figsize=(10, 5))
+    for i, ax in enumerate(axs.flatten()):
+        ax.imshow(imgs[i])
+        ax.set_title(f"Label: {labels[i].item()}")
+        ax.axis("off")
+    plt.show()
+
 
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
@@ -45,6 +68,9 @@ def run_train(config_path):
 
     # Load data
     train_loader, val_loader, num_classes = get_dataloaders(cfg)
+    
+    show_samples(train_loader, mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
+
 
     # Build model
     model = build_resnet18(
@@ -86,7 +112,7 @@ def run_train(config_path):
         # --------------------------------------------------------
         # PHASE SWITCH: Unfreeze Backbone at Epoch 10
         # --------------------------------------------------------
-        if epoch == 10:
+        if epoch == 3:
             print("\n>>> Unfreezing backbone for fine-tuning...")
 
             # Unfreeze ALL parameters

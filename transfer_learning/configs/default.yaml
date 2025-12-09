@@ -11,4 +11,4 @@ num_workers: 2
 img_size: 224
 epochs: 25
 freeze_backbone: true
-lr: 0.0003
+lr: 0.0001
