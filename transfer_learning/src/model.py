@@ -10,6 +10,11 @@ def build_resnet18(num_classes, freeze_backbone=False):
             p.requires_grad = False
 
     model.fc = nn.Linear(model.fc.in_features, num_classes)
+    
+    # Make sure classifier is trainable
+    for p in model.fc.parameters():
+        p.requires_grad = True
+        
     return model
 
 
@@ -24,5 +29,9 @@ def build_resnet50(num_classes, freeze_backbone=False):
 
     # Replace final layer
     model.fc = nn.Linear(model.fc.in_features, num_classes)
+    
+    # Ensure classifier is trainable
+    for p in model.fc.parameters():
+        p.requires_grad = True
 
     return model

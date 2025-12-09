@@ -12,6 +12,19 @@ from src.model import build_resnet18
 from src.utils import accuracy, save_checkpoint
 
 
+def get_scheduler(optimizer, warmup_epochs, total_epochs):
+    def lr_lambda(current_epoch):
+        # Warmup phase
+        if current_epoch < warmup_epochs:
+            return float(current_epoch + 1) / float(max(1, warmup_epochs))
+
+        # Cosine decay phase
+        progress = float(current_epoch - warmup_epochs) / float(max(1, total_epochs - warmup_epochs))
+        return 0.5 * (1.0 + torch.cos(torch.pi * progress))
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+
 def run_train(config_path):
     # Load config file
     cfg = yaml.safe_load(open(config_path, "r"))
@@ -40,7 +53,12 @@ def run_train(config_path):
     )
 
     # Learning rate scheduler
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+    scheduler = get_scheduler(
+        optimizer,
+        warmup_epochs=2,          
+        total_epochs=cfg["epochs"]
+    )
+
 
 
     # Mixed precision training (AMP)
@@ -122,7 +140,11 @@ def run_train(config_path):
         history.setdefault("lr", []).append(current_lr)
 
         # Update scheduler
-        scheduler.step(val_loss)
+        scheduler.step()
+          
+        current_lr = optimizer.param_groups[0]["lr"]
+        print("Current LR:", current_lr)
+        history.setdefault("lr", []).append(current_lr)
         
         for param_group in optimizer.param_groups:
             print("Current LR:", param_group["lr"])
