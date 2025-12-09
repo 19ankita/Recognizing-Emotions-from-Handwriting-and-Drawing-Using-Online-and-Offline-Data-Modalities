@@ -8,8 +8,8 @@ import json
 import os
 
 from src.dataset import get_dataloaders
-from model import build_resnet18
-from utils import accuracy, save_checkpoint
+from src.model import build_resnet18
+from src.utils import accuracy, save_checkpoint
 
 
 def run_train(config_path):
