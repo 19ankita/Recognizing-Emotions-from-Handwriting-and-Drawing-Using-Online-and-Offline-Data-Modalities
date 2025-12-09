@@ -8,7 +8,6 @@ import seaborn as sns
 
 from sklearn.metrics import confusion_matrix
 
-from src.eval_utils import get_predictions
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
 

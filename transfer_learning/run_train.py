@@ -101,7 +101,8 @@ def run_train(config_path):
     )
 
     # Mixed precision scaler
-    scaler = torch.cuda.amp.GradScaler()
+    scaler = torch.amp.GradScaler(device="cuda")
+
 
     # Training history storage
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": [], "lr": []}
@@ -175,7 +176,7 @@ def run_train(config_path):
             for images, labels in tqdm(val_loader, desc="Validating"):
                 images, labels = images.to(device), labels.to(device)
 
-                with torch.amp.autocast("cuda"):
+                with torch.amp.autocast(device_type="cuda"):
                     outputs = model(images)
                     loss = criterion(outputs, labels)
 
