@@ -44,7 +44,7 @@ def plot_class_distribution(dataset_path):
     plt.tight_layout()
     
     os.makedirs("outputs", exist_ok=True)
-    plt.savefig("outputs/class_distribution.png")
+    plt.savefig("outputs/class_distribution.pdf")
     
     plt.show()
 
