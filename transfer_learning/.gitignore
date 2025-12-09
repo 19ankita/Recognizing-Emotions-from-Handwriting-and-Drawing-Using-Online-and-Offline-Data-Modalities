@@ -1,5 +1,5 @@
-data/
-outputs/
+
+
 experiments/*/checkpoints/
 *.pth
 *.pt
