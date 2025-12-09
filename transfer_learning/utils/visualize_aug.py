@@ -113,6 +113,10 @@ def visualize_augmentations(config_path):
         plt.axis("off")
 
     plt.tight_layout()
+    output_path = os.path.join("outputs", "augmentations.png")
+    plt.savefig(output_path, dpi=300, format="pdf")
+    print(f"Saved augmentation visualization → {output_path}")
+
     plt.show()
 
 

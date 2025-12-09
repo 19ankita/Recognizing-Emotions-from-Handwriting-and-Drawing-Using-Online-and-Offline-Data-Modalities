@@ -69,7 +69,7 @@ def plot_class_accuracy(config_path, model_path, output=None):
     plt.title("Per-Class Accuracy")
     plt.xticks(range(num_classes))
     plt.tight_layout()
-    plt.savefig(output)
+    plt.savefig(output, dpi=300, format="pdf")
     print(f"Saved → {output}")
 
 # ----------------------------------------------------
@@ -104,7 +104,7 @@ def plot_confmat(config_path, model_path, output=None):
     plt.title("Normalized Confusion Matrix")
     plt.tight_layout()
     
-    plt.savefig(output)
+    plt.savefig(output, dpi=300, format="pdf")
     print(f"Saved: {output}")
     
     
@@ -164,7 +164,7 @@ def plot_early_stopping(history_file, output=None):
     plt.title("Early Stopping Visualization")
     plt.legend()
     plt.grid(True)
-    plt.savefig(output)
+    plt.savefig(output, dpi=300, format="pdf")
     print(f"Saved → {output}")
 
 # ----------------------------------------------------
@@ -185,7 +185,7 @@ def plot_lr(history_file, output=None):
     plt.ylabel("Learning Rate")
     plt.title("Learning Rate Schedule")
     plt.grid(True)
-    plt.savefig(output)
+    plt.savefig(output, dpi=300, format="pdf")
     print(f"Saved → {output}")
     
 if __name__ == "__main__":
