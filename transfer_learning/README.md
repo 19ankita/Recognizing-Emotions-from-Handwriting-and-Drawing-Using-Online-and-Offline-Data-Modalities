@@ -28,6 +28,10 @@ outputs/ # Metrics, logs, etc.
 - python plot_all.py --history outputs/history.json --model outputs/best_model.pth
 - python visualize_aug.py --config configs/default.yaml
 
+# Checking class distributions
+- python src/utils/plot_class_distribution.py data/emothaw_tasks/cdt
+
+
 
 ## Requirements
 See `requirements.txt`

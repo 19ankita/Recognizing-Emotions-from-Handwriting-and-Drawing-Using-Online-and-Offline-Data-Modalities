@@ -30,29 +30,30 @@ def get_transforms(cfg):
     img_size = cfg["img_size"]
 
     train_tf = transforms.Compose([
-        transforms.RandomResizedCrop(img_size, scale=(0.85, 1.0)),
+        transforms.RandomResizedCrop(img_size, scale=(0.90, 1.0)),
         
-        transforms.RandomHorizontalFlip(p=0.3),
+        transforms.RandomHorizontalFlip(p=0.2),
         
-        transforms.RandomRotation(8),
+        transforms.RandomRotation(5),
         
-        transforms.RandomAffine(degrees=0, 
-                                translate=(0.08, 0.08),
-                                shear=5),
+        #transforms.RandomAffine(degrees=0, 
+                                #translate=(0.08, 0.08),
+                                #shear=5),
 
-        transforms.ColorJitter(brightness=0.15,
-                               contrast=0.15),
+        transforms.ColorJitter(brightness=0.10,
+                               contrast=0.10),
         
         transforms.ToTensor(),
         
-        Cutout(n_holes=1, length=25),
+        Cutout(n_holes=1, length=12),
         
         transforms.Normalize([0.485, 0.456, 0.406],
                              [0.229, 0.224, 0.225])
     ])
 
     val_tf = transforms.Compose([
-        transforms.Resize((img_size, img_size)),
+        transforms.Resize(int(img_size * 1.05)),
+        transforms.CenterCrop(img_size),
         transforms.ToTensor(),
         transforms.Normalize(
                             mean=[0.485, 0.456, 0.406],

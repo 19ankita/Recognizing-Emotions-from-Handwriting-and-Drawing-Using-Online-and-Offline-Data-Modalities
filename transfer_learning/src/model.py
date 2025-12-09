@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 from torchvision import models
 
-def build_resnet18(num_classes, freeze_backbone=False):
+def build_resnet18(num_classes, freeze_backbone=True):
     model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
 
     if freeze_backbone:
@@ -13,7 +13,7 @@ def build_resnet18(num_classes, freeze_backbone=False):
     return model
 
 
-def build_resnet50(num_classes, freeze_backbone=False):
+def build_resnet50(num_classes, freeze_backbone=True):
     # Load pretrained ResNet-50
     model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
 

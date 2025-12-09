@@ -6,9 +6,9 @@ task_dir: "data/emothaw_tasks/cdt"
 
 
 val_ratio: 0.2
-batch_size: 32
+batch_size: 16
 num_workers: 2
 img_size: 224
-epochs: 50
-freeze_backbone: false
+epochs: 20
+freeze_backbone: true
 lr: 0.001
