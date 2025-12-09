@@ -1,117 +1,124 @@
-import torch
-import matplotlib.pyplot as plt
-from torchvision import transforms
-from PIL import Image
-import yaml
 import os
+import cv2
+import yaml
 import numpy as np
+import matplotlib.pyplot as plt
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+import torch
 
-from src.dataset import Cutout  # reuse your Cutout class
 
-
+# -----------------------------------------------------
+# De-normalization helper
+# -----------------------------------------------------
 def denormalize(tensor):
-    """Convert normalized tensor back to image format."""
     mean = torch.tensor([0.485, 0.456, 0.406]).reshape(3,1,1)
-    std = torch.tensor([0.229, 0.224, 0.225]).reshape(3,1,1)
+    std  = torch.tensor([0.229, 0.224, 0.225]).reshape(3,1,1)
     x = tensor * std + mean
-    return x.permute(1,2,0).clamp(0,1)
+    return x.permute(1, 2, 0).clamp(0, 1).cpu().numpy()
 
 
+# -----------------------------------------------------
+# Build SAME augmentations used in get_transforms()
+# -----------------------------------------------------
+def build_train_augs(img_size):
+
+    mean = [0.485, 0.456, 0.406]
+    std  = [0.229, 0.224, 0.225]
+
+    return {
+        "ShiftScaleRotate": A.Compose([
+            A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.10, rotate_limit=8, p=1.0),
+            A.Resize(img_size, img_size), A.Normalize(mean,std), ToTensorV2()
+        ]),
+
+        "ElasticTransform": A.Compose([
+            A.ElasticTransform(alpha=10, sigma=50, alpha_affine=10, p=1.0),
+            A.Resize(img_size, img_size), A.Normalize(mean,std), ToTensorV2()
+        ]),
+
+        "GridDistortion": A.Compose([
+            A.GridDistortion(num_steps=5, distort_limit=0.2, p=1.0),
+            A.Resize(img_size, img_size), A.Normalize(mean,std), ToTensorV2()
+        ]),
+
+        "Perspective": A.Compose([
+            A.Perspective(scale=(0.02, 0.05), p=1.0),
+            A.Resize(img_size, img_size), A.Normalize(mean,std), ToTensorV2()
+        ]),
+
+        "BrightnessContrast": A.Compose([
+            A.RandomBrightnessContrast(0.1, 0.1, p=1.0),
+            A.Resize(img_size, img_size), A.Normalize(mean,std), ToTensorV2()
+        ]),
+
+        "CoarseDropout": A.Compose([
+            A.CoarseDropout(
+                max_holes=2, 
+                max_height=img_size//8, 
+                max_width=img_size//8, 
+                p=1.0
+            ),
+            A.Resize(img_size, img_size), A.Normalize(mean,std), ToTensorV2()
+        ]),
+
+        # Full Pipeline — EXACT match to your training pipeline
+        "Full Pipeline": A.Compose([
+            A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.10, rotate_limit=8, p=0.8),
+            A.ElasticTransform(alpha=10, sigma=50, alpha_affine=10, p=0.5),
+            A.GridDistortion(num_steps=5, distort_limit=0.2, p=0.3),
+            A.Perspective(scale=(0.02, 0.05), p=0.3),
+            A.RandomBrightnessContrast(0.1, 0.1, p=0.5),
+            A.CoarseDropout(max_holes=2, max_height=img_size//8, max_width=img_size//8, p=0.5),
+
+            A.Resize(img_size, img_size),
+            A.Normalize(mean,std),
+            ToTensorV2()
+        ])
+    }
+
+
+# -----------------------------------------------------
+# MAIN VISUALIZATION FUNCTION
+# -----------------------------------------------------
 def visualize_augmentations(config_path):
+
     cfg = yaml.safe_load(open(config_path, "r"))
     img_size = cfg["img_size"]
 
-    # Load sample image (first class, first image)
+    # Load any sample image
     root = cfg["task_dir"]
-    class_name = os.listdir(root)[0]
-    class_dir = os.path.join(root, class_name)
-    img_path = os.path.join(class_dir, os.listdir(class_dir)[0])
+    cls = os.listdir(root)[0]
+    img_path = os.path.join(root, cls, os.listdir(os.path.join(root, cls))[0])
 
-    img = Image.open(img_path).convert("RGB")
+    img = cv2.imread(img_path)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # ---------------------------
-    # DEFINE EVERY AUGMENTATION
-    # ---------------------------
-    aug_original = transforms.ToTensor()
+    augs = build_train_augs(img_size)
 
-    aug_crop = transforms.Compose([
-        transforms.RandomResizedCrop(img_size, scale=(0.85, 1.0)),
-        transforms.ToTensor()
-    ])
+    plt.figure(figsize=(20, 12))
 
-    aug_hflip = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=1.0),
-        transforms.ToTensor()
-    ])
+    for idx, (name, aug) in enumerate(augs.items(), 1):
+        out = aug(image=img)["image"]   # tensor (C,H,W)
 
-    aug_rotate = transforms.Compose([
-        transforms.RandomRotation(8),
-        transforms.ToTensor()
-    ])
+        # Convert to HWC
+        if out.dim() == 3:
+            out_img = denormalize(out)
+        else:
+            out_img = out
 
-    aug_affine = transforms.Compose([
-        transforms.RandomAffine(
-            degrees=0,
-            translate=(0.08, 0.08),
-            shear=5
-        ),
-        transforms.ToTensor()
-    ])
-
-    aug_jitter = transforms.Compose([
-        transforms.ColorJitter(brightness=0.15, contrast=0.15),
-        transforms.ToTensor()
-    ])
-
-    aug_cutout = transforms.Compose([
-        transforms.ToTensor(),
-        Cutout(n_holes=1, length=25)
-    ])
-
-    aug_full_pipeline = transforms.Compose([
-        transforms.RandomResizedCrop(img_size, scale=(0.85, 1.0)),
-        transforms.RandomHorizontalFlip(p=0.3),
-        transforms.RandomRotation(8),
-        transforms.RandomAffine(degrees=0, translate=(0.08,0.08), shear=5),
-        transforms.ColorJitter(brightness=0.15, contrast=0.15),
-        transforms.ToTensor(),
-        Cutout(n_holes=1, length=25),
-        transforms.Normalize([0.485,0.456,0.406], [0.229,0.224,0.225])
-    ])
-
-    # List of labeled transforms
-    transforms_list = [
-        ("Original", aug_original),
-        ("RandomResizedCrop", aug_crop),
-        ("HorizontalFlip", aug_hflip),
-        ("Rotation", aug_rotate),
-        ("Affine (Translate + Shear)", aug_affine),
-        ("ColorJitter", aug_jitter),
-        ("Cutout", aug_cutout),
-        ("Full Pipeline", aug_full_pipeline)
-    ]
-
-    # ---------------------------
-    # VISUALIZE
-    # ---------------------------
-    plt.figure(figsize=(18, 10))
-    for i, (label, tf) in enumerate(transforms_list, 1):
-        tensor = tf(img)
-        if tensor.ndim == 3 and tensor.shape[0] == 3:
-            if "Full Pipeline" in label:
-                tensor = denormalize(tensor)
-            else:
-                tensor = tensor.permute(1, 2, 0).clamp(0, 1)
-
-        plt.subplot(2, 4, i)
-        plt.imshow(tensor)
-        plt.title(label, fontsize=12)
+        plt.subplot(3, 3, idx)
+        plt.imshow(out_img)
+        plt.title(name, fontsize=12)
         plt.axis("off")
 
     plt.tight_layout()
     plt.show()
 
 
+# -----------------------------------------------------
+# Entry Point
+# -----------------------------------------------------
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
