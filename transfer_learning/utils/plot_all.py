@@ -165,3 +165,16 @@ def plot_lr(history_file, output=None):
     plt.grid(True)
     plt.savefig(output)
     print(f"Saved → {output}")
+    
+if __name__ == "__main__":
+    config = "configs/default.yaml"
+    model_path = "outputs/best_model.pth"
+    history_path = "outputs/history.json"
+
+    plot_class_accuracy(config, model_path)
+    plot_confmat(config, model_path)
+    plot_dashboard(history_path, output="outputs/dashboard.html")
+    plot_early_stopping(history_path)
+    plot_lr(history_path)
+
+    print("\nAll plots saved in outputs/ folder.\n")

@@ -23,7 +23,7 @@ outputs/ # Metrics, logs, etc.
 - pip install -r requirements.txt
 - python src/train.py --config configs/default.yaml
 
-## Plotiing the results
+## Plotting the results
 - python plot_training.py --history outputs/history.json
 - python plot_all.py --history outputs/history.json --model outputs/best_model.pth
 - python visualize_aug.py --config configs/default.yaml
