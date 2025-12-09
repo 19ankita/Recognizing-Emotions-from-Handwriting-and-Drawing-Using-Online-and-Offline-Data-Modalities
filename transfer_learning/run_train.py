@@ -7,7 +7,7 @@ from tqdm import tqdm
 import json
 import os
 
-from dataset import get_dataloaders
+from src.dataset import get_dataloaders
 from model import build_resnet18
 from utils import accuracy, save_checkpoint
 
