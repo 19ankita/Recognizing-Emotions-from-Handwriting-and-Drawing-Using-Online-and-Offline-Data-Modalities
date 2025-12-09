@@ -39,6 +39,14 @@ def run_train(config_path):
         lr=cfg["lr"]
     )
 
+    # Learning rate scheduler
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode="min", factor=0.5, patience=3, verbose=True
+    )
+
+    # Mixed precision training (AMP)
+    scaler = torch.cuda.amp.GradScaler()
+    
     # Store training history
     history = {
         "train_loss": [],
@@ -64,10 +72,16 @@ def run_train(config_path):
             images, labels = images.to(device), labels.to(device)
 
             optimizer.zero_grad()
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
+            
+            # AUTOCast forward pass
+            with torch.cuda.amp.autocast():
+                outputs = model(images)
+                loss = criterion(outputs, labels)
+
+            # Backprop (scaled)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
 
             train_loss_total += loss.item()
             train_acc_total += accuracy(outputs, labels)
@@ -85,8 +99,10 @@ def run_train(config_path):
         with torch.no_grad():
             for images, labels in tqdm(val_loader, desc="Validating"):
                 images, labels = images.to(device), labels.to(device)
-                outputs = model(images)
-                loss = criterion(outputs, labels)
+                
+                with torch.cuda.amp.autocast():
+                    outputs = model(images)
+                    loss = criterion(outputs, labels)
 
                 val_loss_total += loss.item()
                 val_acc_total += accuracy(outputs, labels)
@@ -102,11 +118,15 @@ def run_train(config_path):
         history["val_loss"].append(val_loss)
         history["train_acc"].append(train_acc)
         history["val_acc"].append(val_acc)
+        
+        # Update scheduler
+        scheduler.step(val_loss)
 
         # Save best checkpoint
         if val_acc > best_acc:
             best_acc = val_acc
             save_checkpoint(model, "outputs/best_model.pth")
+            print("Saved new BEST model")
 
     # Save training curves
     with open("outputs/history.json", "w") as f:
