@@ -22,7 +22,7 @@ def get_scheduler(optimizer, warmup_epochs, total_epochs):
 
         # Cosine decay phase
         progress = float(current_epoch - warmup_epochs) / float(max(1, total_epochs - warmup_epochs))
-        return 0.5 * (1.0 + math.cos(torch.pi * progress))
+        return 0.5 * (1.0 + math.cos(math.pi * progress))
 
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
