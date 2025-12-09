@@ -17,24 +17,29 @@ import matplotlib.pyplot as plt
 # ------------------------------------------------------------
 # Printing sample images from dataloader
 # ------------------------------------------------------------
-def show_samples(train_loader, mean, std):
 
-    images, labels = next(iter(train_loader))
+def show_batch(loader):
+    
+    if output is None:
+        output = os.path.join("outputs", "aug_img.png")
+    
+    images, labels = next(iter(loader))
+    images = images[:8]
 
-    # Unnormalize
-    imgs = images.clone()
-    for i in range(3):
-        imgs[:, i, :, :] = imgs[:, i, :, :] * std[i] + mean[i]
+    fig, ax = plt.subplots(2, 4, figsize=(12, 6))
+    ax = ax.flatten()
 
-    imgs = imgs.permute(0, 2, 3, 1).cpu().numpy()
+    for i, img in enumerate(images):
+        img = img.permute(1, 2, 0).cpu().numpy()
+        img = (img * 0.229 + 0.485)  # unnormalize approx
+        img = img.clip(0, 1)
 
-    fig, axs = plt.subplots(2, 4, figsize=(10, 5))
-    for i, ax in enumerate(axs.flatten()):
-        ax.imshow(imgs[i])
-        ax.set_title(f"Label: {labels[i].item()}")
-        ax.axis("off")
+        ax[i].imshow(img)
+        ax[i].axis("off")
+
+    plt.tight_layout()
+    plt.savefig(output)
     plt.show()
-
 
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
@@ -69,7 +74,7 @@ def run_train(config_path):
     # Load data
     train_loader, val_loader, num_classes = get_dataloaders(cfg)
     
-    show_samples(train_loader, mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])
+    show_batch(train_loader)
 
 
     # Build model

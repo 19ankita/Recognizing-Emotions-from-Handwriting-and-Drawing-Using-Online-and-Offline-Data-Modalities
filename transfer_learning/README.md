@@ -36,6 +36,10 @@ outputs/ # Metrics, logs, etc.
 ## Requirements
 See `requirements.txt`
 
+- pip install albumentations==1.3.0
+- pip install opencv-python
+
+
 ---^
 ## ResNet-18 Transfer Learning Diagram
                              ┌───────────────────────────────────────────┐
