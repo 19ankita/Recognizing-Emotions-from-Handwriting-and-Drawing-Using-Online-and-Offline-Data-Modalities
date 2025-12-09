@@ -40,9 +40,8 @@ def run_train(config_path):
     )
 
     # Learning rate scheduler
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode="min", factor=0.5, patience=3
-    )
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.5)
+
 
     # Mixed precision training (AMP)
     scaler = torch.cuda.amp.GradScaler()

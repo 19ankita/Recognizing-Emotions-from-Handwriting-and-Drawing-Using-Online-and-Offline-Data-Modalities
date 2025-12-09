@@ -9,6 +9,6 @@ val_ratio: 0.2
 batch_size: 16
 num_workers: 2
 img_size: 224
-epochs: 20
-freeze_backbone: true
-lr: 0.001
+epochs: 5
+freeze_backbone: false
+lr: 0.00001
