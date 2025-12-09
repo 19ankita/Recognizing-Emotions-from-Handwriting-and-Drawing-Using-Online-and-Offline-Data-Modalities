@@ -14,6 +14,28 @@ from src.model import build_resnet18
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+def get_predictions(model, loader, device):
+    model.eval()
+    all_labels = []
+    all_preds = []
+
+    with torch.no_grad():
+        for images, labels in loader:
+            images = images.to(device)
+            labels = labels.to(device)
+
+            outputs = model(images)
+            preds = outputs.argmax(dim=1)
+
+            all_labels.append(labels.cpu().numpy())
+            all_preds.append(preds.cpu().numpy())
+
+    all_labels = np.concatenate(all_labels)
+    all_preds = np.concatenate(all_preds)
+
+    return all_labels, all_preds
+
+
 # ----------------------------------------------------
 # 1. Per-Class Accuracy
 # ----------------------------------------------------
