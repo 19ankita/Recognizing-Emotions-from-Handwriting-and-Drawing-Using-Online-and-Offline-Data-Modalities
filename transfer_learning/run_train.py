@@ -1,5 +1,4 @@
 import argparse
-import yaml
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -9,38 +8,9 @@ import os
 import math
 
 from src.dataset import get_dataloaders
-from src.model import build_resnet18
-from src.model import build_resnet50
+from src.model import build_resnet18, build_resnet50
 from src.utils import accuracy, save_checkpoint
 
-import matplotlib.pyplot as plt
-
-# ------------------------------------------------------------
-# Printing sample images from dataloader
-# ------------------------------------------------------------
-
-def show_batch(loader, output=None):
-    
-    if output is None:
-        output = os.path.join("outputs", "aug_img.png")
-    
-    images, labels = next(iter(loader))
-    images = images[:8]
-
-    fig, ax = plt.subplots(2, 4, figsize=(12, 6))
-    ax = ax.flatten()
-
-    for i, img in enumerate(images):
-        img = img.permute(1, 2, 0).cpu().numpy()
-        img = (img * 0.229 + 0.485)  # unnormalize approx
-        img = img.clip(0, 1)
-
-        ax[i].imshow(img)
-        ax[i].axis("off")
-
-    plt.tight_layout()
-    plt.savefig(output)
-    plt.show()
 
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
@@ -61,9 +31,7 @@ def get_scheduler(optimizer, warmup_epochs, total_epochs):
 # ------------------------------------------------------------
 # Training Function
 # ------------------------------------------------------------
-def run_train(config_path):
-    # Load config file
-    cfg = yaml.safe_load(open(config_path, "r"))
+def run_train(args):
 
     # Prepare output directory
     os.makedirs("outputs", exist_ok=True)
@@ -72,30 +40,28 @@ def run_train(config_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device → {device}")
 
-    # Load data
-    train_loader, val_loader, num_classes = get_dataloaders(cfg)
-    
-    show_batch(train_loader)
+    # --------------------------------------------------------
+    # Load dataset(s)
+    # --------------------------------------------------------
+    train_loader, val_loader, num_classes = get_dataloaders(
+        task_dir=args.task_dir,
+        multi_task=args.multi_task,
+        img_size=args.img_size,
+        batch_size=args.batch_size,
+        num_workers=args.num_workers,
+        val_ratio=args.val_ratio
+    )
     
     # --------------------------------------------------------
     # MODEL SELECTION
     # --------------------------------------------------------
-    model_name = cfg.get("model_name", "resnet18")  # default = resnet18
-
-    print(f"\n>>> Building model: {model_name}")
-
-    if model_name == "resnet18":
-        model = build_resnet18(
-            num_classes=num_classes,
-            freeze_backbone=cfg["freeze_backbone"]
-        )
-    elif model_name == "resnet50":
-        model = build_resnet50(
-            num_classes=num_classes,
-            freeze_backbone=cfg["freeze_backbone"]
-        )
+    print(f"\n>>> Building model: {args.model}")
+    if args.model == "resnet18":
+        model = build_resnet18(num_classes, freeze_backbone=args.freeze_backbone)
+    elif args.model == "resnet50":
+        model = build_resnet50(num_classes, freeze_backbone=args.freeze_backbone)
     else:
-        raise ValueError(f"Unknown model name: {model_name}")
+        raise ValueError("Unknown model: choose resnet18 or resnet50")
 
     model = model.to(device)
 
@@ -114,7 +80,7 @@ def run_train(config_path):
     scheduler = get_scheduler(
         optimizer,
         warmup_epochs=2,
-        total_epochs=cfg["epochs"]
+        total_epochs=args.epochs
     )
 
     # Mixed precision scaler
@@ -129,8 +95,8 @@ def run_train(config_path):
     # ------------------------------------------------------------
     # Training loop
     # ------------------------------------------------------------
-    for epoch in range(cfg["epochs"]):
-        print(f"\n==== Epoch {epoch+1}/{cfg['epochs']} ====")
+    for epoch in range(args.epochs):
+        print(f"\n==== Epoch {epoch+1}/{args.epochs} ====")
 
         # --------------------------------------------------------
         # PHASE SWITCH: Unfreeze Backbone at Epoch 10
@@ -152,7 +118,7 @@ def run_train(config_path):
             scheduler = get_scheduler(
                 optimizer,
                 warmup_epochs=0,
-                total_epochs=cfg["epochs"] - epoch
+                total_epochs=args.epochs - epoch
             )
 
         # --------------------------------------------------------
@@ -225,7 +191,13 @@ def run_train(config_path):
         # --------------------------------------------------------
         if val_acc > best_acc:
             best_acc = val_acc
-            save_checkpoint(model, "outputs/best_model.pth")     
+            
+            filename = f"best_model_{args.task}_{args.model}.pth"
+            save_path = os.path.join("outputs", filename)
+
+            save_checkpoint(model, save_path)
+            print(f"Saved new BEST model : {filename}")
+                
             print("Saved new BEST model")
 
     # Save history file
@@ -236,11 +208,24 @@ def run_train(config_path):
 
 
 # ------------------------------------------------------------
-# CLI entry point
+# CLI
 # ------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="configs/default.yaml")
+
+    parser.add_argument("--task", type=str, required=True,
+                        help="Select task: 1,2,3,4,5 or 'all' for all tasks combined")
+
+    parser.add_argument("--model", type=str, default="resnet18",
+                        choices=["resnet18", "resnet50"])
+
+    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--freeze_backbone", action="store_true")
+
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--img_size", type=int, default=224)
+
     args = parser.parse_args()
 
-    run_train(args.config)
+    run_train(args)

@@ -21,7 +21,17 @@ outputs/ # Metrics, logs, etc.
 
 ## How to Run Training
 - pip install -r requirements.txt
-- python src/train.py --config configs/default.yaml
+# with config file
+- python src/train.py --config configs/default.yaml 
+
+## Using CLI
+# Train ResNet18 on ALL tasks: 
+  - python run_train.py --task all --model resnet18
+# Train ResNet50 on ALL tasks:
+  - python run_train.py --task all --model resnet50
+# Train ResNet50 on task 3:
+  - python run_train.py --task 3 --model resnet50
+
 
 ## Plotting the results
 - python plot_training.py --history outputs/history.json
