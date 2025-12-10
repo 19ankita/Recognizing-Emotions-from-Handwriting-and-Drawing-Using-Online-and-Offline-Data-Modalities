@@ -1,7 +1,7 @@
 #task_dir: "data/emothaw_tasks/cdt"
 #task_dir: "data/emothaw_tasks/cursive_writing"
-#task_dir: "data/emothaw_tasks/house"
-task_dir: "data/emothaw_tasks/pentagon"
+task_dir: "data/emothaw_tasks/house"
+#task_dir: "data/emothaw_tasks/pentagon"
 #task_dir: "data/emothaw_tasks/words"
 
 
