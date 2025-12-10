@@ -10,6 +10,7 @@ import math
 
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
+from src.model import build_resnet50
 from src.utils import accuracy, save_checkpoint
 
 import matplotlib.pyplot as plt
@@ -75,13 +76,29 @@ def run_train(config_path):
     train_loader, val_loader, num_classes = get_dataloaders(cfg)
     
     show_batch(train_loader)
+    
+    # --------------------------------------------------------
+    # MODEL SELECTION
+    # --------------------------------------------------------
+    model_name = cfg.get("model_name", "resnet18")  # default = resnet18
 
+    print(f"\n>>> Building model: {model_name}")
 
-    # Build model
-    model = build_resnet18(
-        num_classes=num_classes,
-        freeze_backbone=cfg["freeze_backbone"]
-    ).to(device)
+    if model_name == "resnet18":
+        model = build_resnet18(
+            num_classes=num_classes,
+            freeze_backbone=cfg["freeze_backbone"]
+        )
+    elif model_name == "resnet50":
+        model = build_resnet50(
+            num_classes=num_classes,
+            freeze_backbone=cfg["freeze_backbone"]
+        )
+    else:
+        raise ValueError(f"Unknown model name: {model_name}")
+
+    model = model.to(device)
+
 
     # Loss function
     criterion = nn.CrossEntropyLoss()

@@ -19,3 +19,15 @@ def build_resnet18(num_classes, freeze_backbone=True):
         freeze_low_level_layers(model)   # <-- Only conv1 + bn1 are frozen
 
     return model
+
+def build_resnet50(num_classes, freeze_backbone=True):
+
+    model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+
+    # Replace classifier head
+    model.fc = nn.Linear(model.fc.in_features, num_classes)
+
+    if freeze_backbone:
+        freeze_low_level_layers(model)  # freeze conv1 + bn1 only
+
+    return model
