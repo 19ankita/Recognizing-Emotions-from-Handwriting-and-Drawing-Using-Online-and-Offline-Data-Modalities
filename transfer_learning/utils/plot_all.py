@@ -48,8 +48,12 @@ def plot_class_accuracy(config_path, model_path, output=None):
 
     _, val_loader, num_classes = get_dataloaders(cfg)
     
-    # Extract class names from dataset
-    class_names = val_loader.dataset.classes 
+    # Handles both ImageFolder and Subset
+    if hasattr(val_loader.dataset, "classes"):
+        class_names = val_loader.dataset.classes
+    else:
+        class_names = val_loader.dataset.dataset.classes
+
 
     model = build_resnet18(num_classes=num_classes, freeze_backbone=False)
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
@@ -91,8 +95,11 @@ def plot_confmat(config_path, model_path, output=None):
     # Load data
     _, val_loader, num_classes = get_dataloaders(cfg)
     
-    # Extract class names from dataset
-    class_names = val_loader.dataset.classes 
+    # Handles both ImageFolder and Subset
+    if hasattr(val_loader.dataset, "classes"):
+        class_names = val_loader.dataset.classes
+    else:
+        class_names = val_loader.dataset.dataset.classes
 
     # Load model
     model = build_resnet18(num_classes=num_classes, freeze_backbone=False)
