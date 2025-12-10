@@ -98,7 +98,13 @@ def visualize_augmentations(config_path):
 
     plt.figure(figsize=(20, 12))
 
-    for idx, (name, aug) in enumerate(augs.items(), 1):
+    # Show ORIGINAL IMAGE first
+    plt.subplot(3, 3, 1)
+    plt.imshow(img)
+    plt.title("Original Image", fontsize=12)
+    plt.axis("off")
+
+    for idx, (name, aug) in enumerate(augs.items(), 2):
         out = aug(image=img)["image"]   # tensor (C,H,W)
 
         # Convert to HWC

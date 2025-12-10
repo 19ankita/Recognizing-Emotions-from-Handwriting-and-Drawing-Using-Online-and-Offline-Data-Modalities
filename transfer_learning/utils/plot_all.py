@@ -42,11 +42,14 @@ def get_predictions(model, loader, device):
 def plot_class_accuracy(config_path, model_path, output=None):
     
     if output is None:
-        output = os.path.join("outputs", "class_accuracy.png")
+        output = os.path.join("outputs", "class_accuracy.pdf")
     
     cfg = yaml.safe_load(open(config_path, "r"))
 
     _, val_loader, num_classes = get_dataloaders(cfg)
+    
+    # Extract class names from dataset
+    class_names = val_loader.dataset.classes 
 
     model = build_resnet18(num_classes=num_classes, freeze_backbone=False)
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
@@ -63,12 +66,14 @@ def plot_class_accuracy(config_path, model_path, output=None):
 
     # Plot
     plt.figure(figsize=(10, 6))
-    plt.bar(range(num_classes), class_acc)
-    plt.xlabel("Class Index")
+    plt.bar(class_names, class_acc)
+    plt.xlabel("Classes")
     plt.ylabel("Accuracy")
     plt.title("Per-Class Accuracy")
-    plt.xticks(range(num_classes))
+    plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
+    
+    os.makedirs(os.path.dirname(output), exist_ok=True)
     plt.savefig(output, dpi=300, format="pdf")
     print(f"Saved → {output}")
 
@@ -78,13 +83,16 @@ def plot_class_accuracy(config_path, model_path, output=None):
 def plot_confmat(config_path, model_path, output=None):
       
     if output is None:
-       output = os.path.join("outputs", "confusion_matrix.png")
+       output = os.path.join("outputs", "confusion_matrix.pdf")
 
     # Load config (yaml)
     cfg = yaml.safe_load(open(config_path, "r"))
 
     # Load data
     _, val_loader, num_classes = get_dataloaders(cfg)
+    
+    # Extract class names from dataset
+    class_names = val_loader.dataset.classes 
 
     # Load model
     model = build_resnet18(num_classes=num_classes, freeze_backbone=False)
@@ -98,57 +106,28 @@ def plot_confmat(config_path, model_path, output=None):
     cm = confusion_matrix(labels, preds, normalize="true")
 
     plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, cmap="Blues", fmt=".2f")
+    sns.heatmap(cm, 
+                annot=True, 
+                cmap="Blues", 
+                fmt=".2f",
+                xticklabels=class_names,
+                yticklabels=class_names)
     plt.xlabel("Predicted")
     plt.ylabel("True Label")
     plt.title("Normalized Confusion Matrix")
     plt.tight_layout()
-    
+    os.makedirs(os.path.dirname(output), exist_ok=True)
     plt.savefig(output, dpi=300, format="pdf")
     print(f"Saved: {output}")
     
-    
-# ----------------------------------------------------
-# 3. Interactive Dashboard
-# ----------------------------------------------------    
-def plot_dashboard(history_file, output=None):
-    
-    if output is None:
-        output = os.path.join("outputs", "dashboard.png")
-        
-    history = json.load(open(history_file, "r"))
-
-    epochs = list(range(1, len(history["train_loss"]) + 1))
-
-    fig = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=("Loss Curves", "Accuracy Curves")
-    )
-
-    # Loss
-    fig.add_trace(go.Scatter(x=epochs, y=history["train_loss"],
-                            mode="lines", name="Train Loss"), row=1, col=1)
-    fig.add_trace(go.Scatter(x=epochs, y=history["val_loss"],
-                            mode="lines", name="Val Loss"), row=1, col=1)
-
-    # Accuracy
-    fig.add_trace(go.Scatter(x=epochs, y=history["train_acc"],
-                            mode="lines", name="Train Acc"), row=1, col=2)
-    fig.add_trace(go.Scatter(x=epochs, y=history["val_acc"],
-                            mode="lines", name="Val Acc"), row=1, col=2)
-
-    fig.update_layout(title="Interactive Training Dashboard", width=1000, height=450)
-    fig.write_html(output)
-    print(f"Saved interactive dashboard → {output}")
-
-
+  
 # ----------------------------------------------------
 # 4. Early Stopping Visualization
 # ----------------------------------------------------
 def plot_early_stopping(history_file, output=None):
     
     if output is None:
-        output = os.path.join("outputs", "early_stopping.png")
+        output = os.path.join("outputs", "early_stopping.pdf")
         
     history = json.load(open(history_file, "r"))
     val_loss = history["val_loss"]
@@ -173,7 +152,7 @@ def plot_early_stopping(history_file, output=None):
 def plot_lr(history_file, output=None):
     
     if output is None:
-        output = os.path.join("outputs", "lr_curve.png")
+        output = os.path.join("outputs", "lr_curve.pdf")
         
     history = json.load(open(history_file, "r"))
     lr = history["lr"]
@@ -195,7 +174,6 @@ if __name__ == "__main__":
 
     plot_class_accuracy(config, model_path)
     plot_confmat(config, model_path)
-    plot_dashboard(history_path, output="outputs/dashboard.html")
     plot_early_stopping(history_path)
     plot_lr(history_path)
 
