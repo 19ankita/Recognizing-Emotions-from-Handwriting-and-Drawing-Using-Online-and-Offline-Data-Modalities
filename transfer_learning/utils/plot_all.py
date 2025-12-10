@@ -10,9 +10,8 @@ from sklearn.metrics import confusion_matrix
 
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
+from src.model import build_resnet50
 
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 
 def get_predictions(model, loader, device):
     model.eval()
@@ -54,9 +53,15 @@ def plot_class_accuracy(config_path, model_path, output=None):
     else:
         class_names = val_loader.dataset.dataset.classes
 
+    if cfg["model_name"] == "resnet18":
+        model = build_resnet18(num_classes, freeze_backbone=False)
+    elif cfg["model_name"] == "resnet50":
+        model = build_resnet50(num_classes, freeze_backbone=False)
+    else:
+        raise ValueError("Unknown model_name")
 
-    model = build_resnet18(num_classes=num_classes, freeze_backbone=False)
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
@@ -102,7 +107,12 @@ def plot_confmat(config_path, model_path, output=None):
         class_names = val_loader.dataset.dataset.classes
 
     # Load model
-    model = build_resnet18(num_classes=num_classes, freeze_backbone=False)
+    if cfg["model_name"] == "resnet18":
+        model = build_resnet18(num_classes, freeze_backbone=False)
+    elif cfg["model_name"] == "resnet50":
+        model = build_resnet50(num_classes, freeze_backbone=False)
+    else:
+        raise ValueError("Unknown model_name")
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)

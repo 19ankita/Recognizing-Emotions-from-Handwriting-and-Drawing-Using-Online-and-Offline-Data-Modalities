@@ -225,7 +225,7 @@ def run_train(config_path):
         # --------------------------------------------------------
         if val_acc > best_acc:
             best_acc = val_acc
-            save_checkpoint(model, "outputs/best_model.pth")
+            save_checkpoint(model, "outputs/best_model.pth")     
             print("Saved new BEST model")
 
     # Save history file
