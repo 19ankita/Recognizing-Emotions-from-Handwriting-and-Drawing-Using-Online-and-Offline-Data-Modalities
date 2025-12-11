@@ -93,9 +93,9 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     # CASE 1: SINGLE TASK
     # ------------------------------
     if task != "all":
-        task_dir = os.path.join(task_root, task)
+        task_root = os.path.join(task_root, task)
         print(f"Loading single task: {task_root}")
-        dataset = AlbumentationsDataset(task_dir)
+        dataset = AlbumentationsDataset(task_root)
 
     # ------------------------------
     # CASE 2: ALL TASKS COMBINED
@@ -103,13 +103,13 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     else:
         print("Loading ALL tasks...")
         subfolders = sorted([
-            f for f in os.listdir(task_dir)
-            if os.path.isdir(os.path.join(task_dir, f))
+            f for f in os.listdir(task_root)
+            if os.path.isdir(os.path.join(task_root, f))
         ])
 
         datasets = []
         for sub in subfolders:
-            path = os.path.join(task_dir, sub)
+            path = os.path.join(task_root, sub)
             print(" :", path)
             datasets.append(AlbumentationsDataset(path))
 
