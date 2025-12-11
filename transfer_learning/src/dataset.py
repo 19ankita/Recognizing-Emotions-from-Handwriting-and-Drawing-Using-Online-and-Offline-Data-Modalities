@@ -69,7 +69,7 @@ class AlbumentationsDataset(ImageFolder):
         # extract pseudo dynamic features BEFORE augmentation
         pseudo = extract_pseudo_dynamic_features(image)
 
-        return image, label
+        return image,  pseudo, label
 
 
 # ------------------------------------------------------------
