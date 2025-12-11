@@ -45,7 +45,6 @@ def run_train(args):
     # --------------------------------------------------------
     train_loader, val_loader, num_classes = get_dataloaders(
         task_dir=args.task_dir,
-        multi_task=args.multi_task,
         img_size=args.img_size,
         batch_size=args.batch_size,
         num_workers=args.num_workers,

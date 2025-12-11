@@ -26,9 +26,9 @@ outputs/ # Metrics, logs, etc.
 
 ## Using CLI
 # Train ResNet18 on ALL tasks: 
-  - python run_train.py --task all --model resnet18 --task_root data/emothaw
+  - python run_train.py --task all --model resnet18 --task_dir data/emothaw
 # Train ResNet18 on task 3:
-  - python run_train.py --task task1 --model resnet18 --task_root data/emothaw
+  - python run_train.py --task task1 --model resnet18 --task_dir data/emothaw
 
 
 ## Plotting the results
