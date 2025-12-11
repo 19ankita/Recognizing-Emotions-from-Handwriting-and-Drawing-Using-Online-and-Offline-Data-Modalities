@@ -34,7 +34,7 @@ outputs/ # Metrics, logs, etc.
 ## Plotting the results
 - python plot_training.py --history outputs/history.json
 - python plot_all.py --history outputs/history.json --model outputs/best_model.pth
-- python visualize_aug.py --config configs/default.yaml
+- python visualize_augmentations.py --task all --task_dir data/emothaw_tasks
 
 # Checking class distributions
 - python src/utils/plot_class_distribution.py data/emothaw_tasks/cdt

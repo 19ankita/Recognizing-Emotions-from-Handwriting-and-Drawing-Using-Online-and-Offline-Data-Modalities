@@ -1,72 +1,72 @@
 import torch
 import json
-import yaml
-import numpy as np
 import os
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 from sklearn.metrics import confusion_matrix
 
 from src.dataset import get_dataloaders
-from src.model import build_resnet18
-from src.model import build_resnet50
+from src.model import build_resnet18, build_resnet50
 
 
+# ----------------------------------------------------
+# HELPER: Get predictions
+# ----------------------------------------------------
 def get_predictions(model, loader, device):
     model.eval()
     all_labels = []
     all_preds = []
 
     with torch.no_grad():
-        for images, labels in loader:
-            images = images.to(device)
+        for images, pseudo, labels in loader:
+            images, pseudo = images.to(device), pseudo.to(device)
             labels = labels.to(device)
 
-            outputs = model(images)
+            outputs = model(images, pseudo)
             preds = outputs.argmax(dim=1)
 
             all_labels.append(labels.cpu().numpy())
             all_preds.append(preds.cpu().numpy())
 
-    all_labels = np.concatenate(all_labels)
-    all_preds = np.concatenate(all_preds)
-
-    return all_labels, all_preds
+    return np.concatenate(all_labels), np.concatenate(all_preds)
 
 
 # ----------------------------------------------------
-# 1. Per-Class Accuracy
+# PER-CLASS ACCURACY
 # ----------------------------------------------------
-def plot_class_accuracy(config_path, model_path, output=None):
-    
-    if output is None:
-        output = os.path.join("outputs", "class_accuracy.pdf")
-    
-    cfg = yaml.safe_load(open(config_path, "r"))
+def plot_class_accuracy(task, task_dir, model_name, model_path,
+                        img_size=224, batch_size=32, val_ratio=0.2,
+                        output="outputs/class_accuracy.pdf"):
 
-    _, val_loader, num_classes = get_dataloaders(cfg)
-    
-    # Handles both ImageFolder and Subset
-    if hasattr(val_loader.dataset, "classes"):
-        class_names = val_loader.dataset.classes
+    _, val_loader, num_classes = get_dataloaders(
+        task=task,
+        task_root=task_dir,
+        img_size=img_size,
+        batch_size=batch_size,
+        num_workers=2,
+        val_ratio=val_ratio
+    )
+
+    # Get class names
+    if hasattr(val_loader.dataset.subset, "dataset"):
+        class_names = val_loader.dataset.subset.dataset.classes
     else:
         class_names = val_loader.dataset.dataset.classes
 
-    if cfg["model_name"] == "resnet18":
+    # Load model
+    if model_name == "resnet18":
         model = build_resnet18(num_classes, freeze_backbone=False)
-    elif cfg["model_name"] == "resnet50":
-        model = build_resnet50(num_classes, freeze_backbone=False)
     else:
-        raise ValueError("Unknown model_name")
+        model = build_resnet50(num_classes, freeze_backbone=False)
 
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
-    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
     labels, preds = get_predictions(model, val_loader, device)
 
+    # Per-class accuracy
     class_acc = []
     for cls in range(num_classes):
         idx = labels == cls
@@ -75,122 +75,114 @@ def plot_class_accuracy(config_path, model_path, output=None):
 
     # Plot
     plt.figure(figsize=(10, 6))
-    plt.bar(class_names, class_acc)
-    plt.xlabel("Classes")
+    plt.bar(class_names, class_acc, color="steelblue")
+    plt.xlabel("Class")
     plt.ylabel("Accuracy")
     plt.title("Per-Class Accuracy")
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
-    
+
     os.makedirs(os.path.dirname(output), exist_ok=True)
-    plt.savefig(output, dpi=300, format="pdf")
+    plt.savefig(output, dpi=300)
     print(f"Saved → {output}")
 
+
 # ----------------------------------------------------
-# 2. Confusion Matrix
-# ---------------------------------------------------
-def plot_confmat(config_path, model_path, output=None):
-      
-    if output is None:
-       output = os.path.join("outputs", "confusion_matrix.pdf")
+# CONFUSION MATRIX
+# ----------------------------------------------------
+def plot_confmat(task, task_dir, model_name, model_path,
+                 img_size=224, batch_size=32, val_ratio=0.2,
+                 output="outputs/confusion_matrix.pdf"):
 
-    # Load config (yaml)
-    cfg = yaml.safe_load(open(config_path, "r"))
+    _, val_loader, num_classes = get_dataloaders(
+        task=task,
+        task_root=task_dir,
+        img_size=img_size,
+        batch_size=batch_size,
+        num_workers=2,
+        val_ratio=val_ratio
+    )
 
-    # Load data
-    _, val_loader, num_classes = get_dataloaders(cfg)
-    
-    # Handles both ImageFolder and Subset
-    if hasattr(val_loader.dataset, "classes"):
-        class_names = val_loader.dataset.classes
+    if hasattr(val_loader.dataset.subset, "dataset"):
+        class_names = val_loader.dataset.subset.dataset.classes
     else:
         class_names = val_loader.dataset.dataset.classes
 
-    # Load model
-    if cfg["model_name"] == "resnet18":
+    if model_name == "resnet18":
         model = build_resnet18(num_classes, freeze_backbone=False)
-    elif cfg["model_name"] == "resnet50":
-        model = build_resnet50(num_classes, freeze_backbone=False)
     else:
-        raise ValueError("Unknown model_name")
+        model = build_resnet50(num_classes, freeze_backbone=False)
+
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    # Predictions
     labels, preds = get_predictions(model, val_loader, device)
-
     cm = confusion_matrix(labels, preds, normalize="true")
 
     plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, 
-                annot=True, 
-                cmap="Blues", 
-                fmt=".2f",
+    sns.heatmap(cm, annot=True, cmap="Blues",
                 xticklabels=class_names,
-                yticklabels=class_names)
+                yticklabels=class_names,
+                fmt=".2f")
     plt.xlabel("Predicted")
     plt.ylabel("True Label")
     plt.title("Normalized Confusion Matrix")
     plt.tight_layout()
+
     os.makedirs(os.path.dirname(output), exist_ok=True)
-    plt.savefig(output, dpi=300, format="pdf")
-    print(f"Saved: {output}")
-    
-  
+    plt.savefig(output, dpi=300)
+    print(f"Saved → {output}")
+
+
 # ----------------------------------------------------
-# 4. Early Stopping Visualization
+# LEARNING CURVE + EARLY STOPPING
 # ----------------------------------------------------
-def plot_early_stopping(history_file, output=None):
-    
-    if output is None:
-        output = os.path.join("outputs", "early_stopping.pdf")
-        
-    history = json.load(open(history_file, "r"))
+def plot_early_stopping(history_path, output="outputs/early_stopping.pdf"):
+    history = json.load(open(history_path, "r"))
     val_loss = history["val_loss"]
 
     best_epoch = val_loss.index(min(val_loss)) + 1
     epochs = range(1, len(val_loss) + 1)
 
     plt.figure(figsize=(10, 5))
-    plt.plot(epochs, val_loss, label="Val Loss", linewidth=2)
+    plt.plot(epochs, val_loss, label="Validation Loss")
     plt.axvline(best_epoch, color="red", linestyle="--", label=f"Best Epoch: {best_epoch}")
     plt.xlabel("Epoch")
-    plt.ylabel("Validation Loss")
+    plt.ylabel("Loss")
     plt.title("Early Stopping Visualization")
     plt.legend()
-    plt.grid(True)
-    plt.savefig(output, dpi=300, format="pdf")
+    plt.grid()
+    plt.savefig(output, dpi=300)
     print(f"Saved → {output}")
 
-# ----------------------------------------------------
-# 5. Learning Rate Curve
-# ----------------------------------------------------
-def plot_lr(history_file, output=None):
-    
-    if output is None:
-        output = os.path.join("outputs", "lr_curve.pdf")
-        
-    history = json.load(open(history_file, "r"))
+
+def plot_lr(history_path, output="outputs/lr_curve.pdf"):
+    history = json.load(open(history_path, "r"))
     lr = history["lr"]
-    epochs = range(1, len(lr) + 1)
 
     plt.figure(figsize=(8, 5))
-    plt.plot(epochs, lr, linewidth=2)
+    plt.plot(range(1, len(lr)+1), lr)
     plt.xlabel("Epoch")
     plt.ylabel("Learning Rate")
     plt.title("Learning Rate Schedule")
-    plt.grid(True)
-    plt.savefig(output, dpi=300, format="pdf")
+    plt.grid()
+    plt.savefig(output, dpi=300)
     print(f"Saved → {output}")
-    
+
+
+# ----------------------------------------------------
+# MAIN: No YAML needed
+# ----------------------------------------------------
 if __name__ == "__main__":
-    config = "configs/default.yaml"
-    model_path = "outputs/best_model.pth"
+    task = "all"
+    task_dir = "data/emothaw_tasks"
+    model_name = "resnet18"
+    model_path = "outputs/best_model_all_resnet18.pth"
     history_path = "outputs/history.json"
 
-    plot_class_accuracy(config, model_path)
-    plot_confmat(config, model_path)
+    plot_class_accuracy(task, task_dir, model_name, model_path)
+    plot_confmat(task, task_dir, model_name, model_path)
     plot_early_stopping(history_path)
     plot_lr(history_path)
 

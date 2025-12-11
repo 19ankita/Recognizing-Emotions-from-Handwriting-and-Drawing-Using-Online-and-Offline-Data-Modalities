@@ -6,6 +6,8 @@ from torchvision.datasets import ImageFolder
 import torch
 import os
 
+from src.pseudo_features import extract_pseudo_dynamic_features
+
 
 # ------------------------------------------------------------
 # Albumentations transforms
@@ -63,6 +65,9 @@ class AlbumentationsDataset(ImageFolder):
 
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        
+        # extract pseudo dynamic features BEFORE augmentation
+        pseudo = extract_pseudo_dynamic_features(image)
 
         return image, label
 
@@ -79,7 +84,7 @@ class TransformSubset(Dataset):
         return len(self.subset)
 
     def __getitem__(self, idx):
-        image, label = self.subset[idx]   # get raw image + label
+        image, pseudo,  label = self.subset[idx]  
         image = self.transform(image=image)["image"]
         return image, label
     

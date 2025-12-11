@@ -11,6 +11,14 @@ from src.dataset import get_dataloaders
 from src.model import build_resnet18, build_resnet50
 from src.utils import accuracy, save_checkpoint
 
+# GradCAM library
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
+import numpy as np
+import cv2
+
+torch.backends.cudnn.benchmark = True
+
 
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
@@ -28,6 +36,33 @@ def get_scheduler(optimizer, warmup_epochs, total_epochs):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
+# ------------------------------------------------------------
+# GradCAM visualization function
+# ------------------------------------------------------------
+def generate_gradcam(model, image_tensor, pseudo_tensor, save_path, layer_name):
+    model.eval()
+
+    # pick target layer
+    target_layer = dict(model.backbone.named_children())[layer_name]
+
+    cam = GradCAM(model=model, target_layers=[target_layer], use_cuda=True)
+
+    grayscale_cam = cam(
+        input_tensor=[image_tensor],
+        aug_smooth=True,
+        eigen_smooth=True
+    )[0]  # take batch index 0
+
+    # Convert tensor to numpy image
+    img = image_tensor.cpu().permute(1, 2, 0).numpy()
+    img = (img - img.min()) / (img.max() - img.min())
+
+    cam_image = show_cam_on_image(img, grayscale_cam, use_rgb=True)
+
+    cv2.imwrite(save_path, cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR))
+    
+    
+    
 # ------------------------------------------------------------
 # Training Function
 # ------------------------------------------------------------
@@ -86,7 +121,6 @@ def run_train(args):
     # Mixed precision scaler
     scaler = torch.amp.GradScaler(device="cuda")
 
-
     # Training history storage
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": [], "lr": []}
 
@@ -128,13 +162,15 @@ def run_train(args):
         train_loss_total = 0
         train_acc_total = 0
 
-        for images, labels in tqdm(train_loader, desc="Training"):
-            images, labels = images.to(device), labels.to(device)
-
+        for images, pseudo, labels in tqdm(train_loader, desc="Training"):
+            images = images.to(device)  
+            pseudo = pseudo.to(device)
+            labels = labels.to(device)
             optimizer.zero_grad()
 
             with torch.amp.autocast("cuda"):
-                outputs = model(images)
+                pseudo = pseudo.to(device)  # float tensor
+                outputs = model(images, pseudo)
                 loss = criterion(outputs, labels)
 
             # Backprop
@@ -157,7 +193,9 @@ def run_train(args):
 
         with torch.no_grad():
             for images, labels in tqdm(val_loader, desc="Validating"):
-                images, labels = images.to(device), labels.to(device)
+                images = images.to(device)  
+                pseudo = pseudo.to(device)
+                labels = labels.to(device)
 
                 with torch.amp.autocast(device_type="cuda"):
                     outputs = model(images)
@@ -199,6 +237,24 @@ def run_train(args):
             print(f"Saved new BEST model : {filename}")
                 
             print("Saved new BEST model")
+            
+            
+        # ------------------------------------------------------------
+        # GradCAM Visualization for best model
+        # ------------------------------------------------------------
+        sample_image, sample_pseudo, _ = next(iter(val_loader))
+        sample_image = sample_image[0].to(device)
+        sample_pseudo = sample_pseudo[0].to(device)
+
+        save_path = f"outputs/gradcam/epoch_{epoch+1}_best_cam.jpg"
+        generate_gradcam(
+            model=model,
+            image_tensor=sample_image.unsqueeze(0),
+            pseudo_tensor=sample_pseudo.unsqueeze(0),
+            save_path=save_path,
+            layer_name="layer4"  # most interpretable layer
+        )
+        print(f"GradCAM saved → {save_path}")
 
     # Save history file
     with open("outputs/history.json", "w") as f:

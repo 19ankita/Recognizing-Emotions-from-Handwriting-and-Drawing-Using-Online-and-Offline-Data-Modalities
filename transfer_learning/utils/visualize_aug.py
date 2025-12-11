@@ -1,6 +1,5 @@
 import os
 import cv2
-import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 import albumentations as A
@@ -19,7 +18,7 @@ def denormalize(tensor):
 
 
 # -----------------------------------------------------
-# Build SAME augmentations used in get_transforms()
+# Build SAME augmentations used in dataset.py
 # -----------------------------------------------------
 def build_train_augs(img_size):
 
@@ -33,7 +32,7 @@ def build_train_augs(img_size):
         ]),
 
         "ElasticTransform": A.Compose([
-            A.ElasticTransform(alpha=10, sigma=50, alpha_affine=10, p=1.0),
+            A.ElasticTransform(alpha=10, sigma=50, p=1.0),
             A.Resize(img_size, img_size), A.Normalize(mean,std), ToTensorV2()
         ]),
 
@@ -53,19 +52,14 @@ def build_train_augs(img_size):
         ]),
 
         "CoarseDropout": A.Compose([
-            A.CoarseDropout(
-                max_holes=2, 
-                max_height=img_size//8, 
-                max_width=img_size//8, 
-                p=1.0
-            ),
+            A.CoarseDropout(max_holes=2, max_height=img_size//8, max_width=img_size//8, p=1.0),
             A.Resize(img_size, img_size), A.Normalize(mean,std), ToTensorV2()
         ]),
 
-        # Full Pipeline — EXACT match to your training pipeline
+        # Full training pipeline
         "Full Pipeline": A.Compose([
             A.ShiftScaleRotate(shift_limit=0.05, scale_limit=0.10, rotate_limit=8, p=0.8),
-            A.ElasticTransform(alpha=10, sigma=50, alpha_affine=10, p=0.5),
+            A.ElasticTransform(alpha=10, sigma=50, p=0.5),
             A.GridDistortion(num_steps=5, distort_limit=0.2, p=0.3),
             A.Perspective(scale=(0.02, 0.05), p=0.3),
             A.RandomBrightnessContrast(0.1, 0.1, p=0.5),
@@ -74,22 +68,32 @@ def build_train_augs(img_size):
             A.Resize(img_size, img_size),
             A.Normalize(mean,std),
             ToTensorV2()
-        ])
+        ]),
     }
 
 
 # -----------------------------------------------------
-# MAIN VISUALIZATION FUNCTION
+# AUGMENTATION VISUALIZATION (NO YAML)
 # -----------------------------------------------------
-def visualize_augmentations(config_path):
+def visualize_augmentations(task, task_dir, img_size):
 
-    cfg = yaml.safe_load(open(config_path, "r"))
-    img_size = cfg["img_size"]
+    # -------------------------------------------------
+    # Load a sample image
+    # -------------------------------------------------
+    if task == "all":
+        subfolders = sorted([
+            f for f in os.listdir(task_dir)
+            if os.path.isdir(os.path.join(task_dir, f))
+        ])
+        first_task = subfolders[0]
+        folder = os.path.join(task_dir, first_task)
+    else:
+        folder = os.path.join(task_dir, task)
 
-    # Load any sample image
-    root = cfg["task_dir"]
-    cls = os.listdir(root)[0]
-    img_path = os.path.join(root, cls, os.listdir(os.path.join(root, cls))[0])
+    class_names = os.listdir(folder)
+    first_class = class_names[0]
+
+    img_path = os.path.join(folder, first_class, os.listdir(os.path.join(folder, first_class))[0])
 
     img = cv2.imread(img_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -98,41 +102,41 @@ def visualize_augmentations(config_path):
 
     plt.figure(figsize=(20, 12))
 
-    # Show ORIGINAL IMAGE first
+    # ORIGINAL
     plt.subplot(3, 3, 1)
     plt.imshow(img)
-    plt.title("Original Image", fontsize=12)
+    plt.title("Original Image")
     plt.axis("off")
 
-    for idx, (name, aug) in enumerate(augs.items(), 2):
-        out = aug(image=img)["image"]   # tensor (C,H,W)
-
-        # Convert to HWC
-        if out.dim() == 3:
-            out_img = denormalize(out)
-        else:
-            out_img = out
+    # AUGMENTED IMAGES
+    for idx, (name, aug) in enumerate(augs.items(), start=2):
+        out_tensor = aug(image=img)["image"]
+        out_img = denormalize(out_tensor)
 
         plt.subplot(3, 3, idx)
         plt.imshow(out_img)
-        plt.title(name, fontsize=12)
+        plt.title(name)
         plt.axis("off")
 
     plt.tight_layout()
     output_path = os.path.join("outputs", "augmentations.pdf")
-    plt.savefig(output_path, dpi=300, format="pdf")
+    os.makedirs("outputs", exist_ok=True)
+    plt.savefig(output_path, dpi=300)
     print(f"Saved augmentation visualization → {output_path}")
-
     plt.show()
 
 
 # -----------------------------------------------------
-# Entry Point
+# ENTRY POINT
 # -----------------------------------------------------
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True)
+
+    parser.add_argument("--task", type=str, default="all")
+    parser.add_argument("--task_dir", type=str, required=True)
+    parser.add_argument("--img_size", type=int, default=224)
+
     args = parser.parse_args()
 
-    visualize_augmentations(args.config)
+    visualize_augmentations(args.task, args.task_dir, args.img_size)
