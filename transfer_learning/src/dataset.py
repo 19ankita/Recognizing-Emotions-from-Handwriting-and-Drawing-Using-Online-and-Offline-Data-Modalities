@@ -72,7 +72,7 @@ class AlbumentationsDataset(ImageFolder):
 
 
 
-def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_ratio):
+def get_dataloaders(task, task_dir, img_size, batch_size, num_workers, val_ratio):
 
     train_tf, val_tf = get_transforms(img_size)
 
@@ -80,7 +80,7 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     # CASE 1: SINGLE TASK
     # ------------------------------
     if task != "all":
-        task_dir = os.path.join(task_root, task)
+        task_dir = os.path.join(task_dir, task)
         print(f"Loading single task: {task_dir}")
         dataset = AlbumentationsDataset(task_dir)
 
