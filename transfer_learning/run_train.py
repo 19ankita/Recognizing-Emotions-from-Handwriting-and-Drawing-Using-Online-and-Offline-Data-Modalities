@@ -162,6 +162,12 @@ def run_train(args):
         train_loss_total = 0
         train_acc_total = 0
 
+        batch = next(iter(train_loader))
+        print("Batch len:", len(batch))
+        print("Types:", type(batch))
+        print("Contents:", batch)
+        exit()
+
         for images, pseudo, labels in tqdm(train_loader, desc="Training"):
             images = images.to(device)  
             pseudo = pseudo.to(device)
@@ -286,7 +292,7 @@ if __name__ == "__main__":
     parser.add_argument("--img_size", type=int, default=224)
     parser.add_argument("--val_ratio", type=float, default=0.2)
     
-    parser.add_argument("--num_workers", type=int, default=4,
+    parser.add_argument("--num_workers", type=int, default=2,
                         help="Number of workers for DataLoader.")
 
     args = parser.parse_args()

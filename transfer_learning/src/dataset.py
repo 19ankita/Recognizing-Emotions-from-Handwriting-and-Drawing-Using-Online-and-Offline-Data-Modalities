@@ -69,7 +69,7 @@ class AlbumentationsDataset(ImageFolder):
         # extract pseudo dynamic features BEFORE augmentation
         pseudo = extract_pseudo_dynamic_features(image)
 
-        return image,  pseudo, label
+        return image, pseudo, label
 
 
 # ------------------------------------------------------------
@@ -86,7 +86,7 @@ class TransformSubset(Dataset):
     def __getitem__(self, idx):
         image, pseudo,  label = self.subset[idx]  
         image = self.transform(image=image)["image"]
-        return image, label
+        return image, pseudo, label
     
     
     
