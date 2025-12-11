@@ -192,13 +192,13 @@ def run_train(args):
         val_acc_total = 0
 
         with torch.no_grad():
-            for images, labels in tqdm(val_loader, desc="Validating"):
+            for images, pseudo, labels in tqdm(val_loader, desc="Validating"):
                 images = images.to(device)  
                 pseudo = pseudo.to(device)
                 labels = labels.to(device)
 
                 with torch.amp.autocast(device_type="cuda"):
-                    outputs = model(images)
+                    outputs = model(images, pseudo)
                     loss = criterion(outputs, labels)
 
                 val_loss_total += loss.item()
