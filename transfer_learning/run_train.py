@@ -218,6 +218,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--model", type=str, default="resnet18",
                         choices=["resnet18", "resnet50"])
+    
+    parser.add_argument("--task_dir", type=str, required=True,
+                        help="Path to your dataset root folder containing class subdirectories.")
 
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--lr", type=float, default=1e-3)
