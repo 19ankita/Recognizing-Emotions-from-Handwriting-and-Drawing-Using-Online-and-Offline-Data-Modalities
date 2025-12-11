@@ -44,6 +44,7 @@ def run_train(args):
     # Load dataset(s)
     # --------------------------------------------------------
     train_loader, val_loader, num_classes = get_dataloaders(
+        task=args.task,
         task_dir=args.task_dir,
         img_size=args.img_size,
         batch_size=args.batch_size,
@@ -71,7 +72,7 @@ def run_train(args):
     # Optimizer (Phase 1: classifier-only or full model depending on freeze_backbone)
     optimizer = optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=cfg["lr"],
+        lr=args.lr,
         weight_decay=1e-4
     )
 
@@ -227,6 +228,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--img_size", type=int, default=224)
+    parser.add_argument("--val_ratio", type=float, default=0.2)
+    
+    parser.add_argument("--num_workers", type=int, default=4,
+                        help="Number of workers for DataLoader.")
 
     args = parser.parse_args()
 
