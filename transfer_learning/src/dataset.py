@@ -90,13 +90,13 @@ def get_dataloaders(task, task_dir, img_size, batch_size, num_workers, val_ratio
     else:
         print("Loading ALL tasks...")
         subfolders = sorted([
-            f for f in os.listdir(task_root)
-            if f.startswith("task") and os.path.isdir(os.path.join(task_root, f))
+            f for f in os.listdir(task_dir)
+            if f.startswith("task") and os.path.isdir(os.path.join(task_dir, f))
         ])
 
         datasets = []
         for sub in subfolders:
-            path = os.path.join(task_root, sub)
+            path = os.path.join(task_dir, sub)
             print(" :", path)
             datasets.append(AlbumentationsDataset(path))
 
