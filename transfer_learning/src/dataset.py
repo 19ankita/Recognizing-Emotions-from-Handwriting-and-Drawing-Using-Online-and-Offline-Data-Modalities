@@ -97,7 +97,7 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
         datasets = []
         for sub in subfolders:
             path = os.path.join(task_root, sub)
-            print(" →", path)
+            print(" :", path)
             datasets.append(AlbumentationsDataset(path))
 
         dataset = ConcatDataset(datasets)
@@ -115,16 +115,19 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
         generator=torch.Generator().manual_seed(42)
     )
 
-    # Assign transforms
+    # Case 1: ConcatDataset
     if isinstance(dataset, ConcatDataset):
-        # Each dataset in ConcatDataset is an AlbumentationsDataset
+        # All sub-datasets inside ConcatDataset get TRAIN transform
         for ds in dataset.datasets:
             ds.set_transform(train_tf)
-    else:
-        dataset.set_transform(train_tf)
 
-    train_ds.dataset.set_transform(train_tf)
-    val_ds.dataset.set_transform(val_tf)
+        # Validation dataset must use val_tf
+        val_ds.dataset.set_transform(val_tf)
+
+    else:
+        # Normal single dataset
+        dataset.set_transform(train_tf)
+        val_ds.dataset.set_transform(val_tf)
 
     # Build loaders
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
