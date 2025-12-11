@@ -1,12 +1,15 @@
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import cv2
-from torch.utils.data import DataLoader, random_split, ConcatDataset
+from torch.utils.data import DataLoader, random_split, ConcatDataset, Dataset
 from torchvision.datasets import ImageFolder
 import torch
 import os
 
 
+# ------------------------------------------------------------
+# Albumentations transforms
+# ------------------------------------------------------------
 def get_transforms(img_size):
 
     mean = [0.485, 0.456, 0.406]
@@ -52,12 +55,8 @@ def get_transforms(img_size):
 # ------------------------------------------------------------
 class AlbumentationsDataset(ImageFolder):
 
-    def __init__(self, root, transform=None):
+    def __init__(self, root):
         super().__init__(root)
-        self.albu_transform = transform
-
-    def set_transform(self, tf):
-        self.albu_transform = tf
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]
@@ -65,14 +64,28 @@ class AlbumentationsDataset(ImageFolder):
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        if self.albu_transform:
-            image = self.albu_transform(image=image)["image"]
-
         return image, label
 
 
+# ------------------------------------------------------------
+# Wrapper that applies transforms AFTER random_split
+# ------------------------------------------------------------
+class TransformSubset(Dataset):
+    def __init__(self, subset, transform):
+        self.subset = subset
+        self.transform = transform
 
-def get_dataloaders(task, task_dir, img_size, batch_size, num_workers, val_ratio):
+    def __len__(self):
+        return len(self.subset)
+
+    def __getitem__(self, idx):
+        image, label = self.subset[idx]   # get raw image + label
+        image = self.transform(image=image)["image"]
+        return image, label
+    
+    
+    
+def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_ratio):
 
     train_tf, val_tf = get_transforms(img_size)
 
@@ -80,8 +93,8 @@ def get_dataloaders(task, task_dir, img_size, batch_size, num_workers, val_ratio
     # CASE 1: SINGLE TASK
     # ------------------------------
     if task != "all":
-        task_dir = os.path.join(task_dir, task)
-        print(f"Loading single task: {task_dir}")
+        task_dir = os.path.join(task_root, task)
+        print(f"Loading single task: {task_root}")
         dataset = AlbumentationsDataset(task_dir)
 
     # ------------------------------
@@ -101,39 +114,36 @@ def get_dataloaders(task, task_dir, img_size, batch_size, num_workers, val_ratio
             datasets.append(AlbumentationsDataset(path))
 
         dataset = ConcatDataset(datasets)
-
-    # ------------------------------
+        
+        
+    # --------------------------------------------------------
     # TRAIN/VAL SPLIT
-    # ------------------------------
+    # --------------------------------------------------------
     total_len = len(dataset)
     val_len = int(total_len * val_ratio)
     train_len = total_len - val_len
 
-    train_ds, val_ds = random_split(
+    train_subset, val_subset = random_split(
         dataset,
         [train_len, val_len],
         generator=torch.Generator().manual_seed(42)
     )
-
-    # Case 1: ConcatDataset
-    if isinstance(dataset, ConcatDataset):
-        # All sub-datasets inside ConcatDataset get TRAIN transform
-        for ds in dataset.datasets:
-            ds.set_transform(train_tf)
-
-        # Validation dataset must use val_tf
-        val_ds.dataset.set_transform(val_tf)
-
-    else:
-        # Normal single dataset
-        dataset.set_transform(train_tf)
-        val_ds.dataset.set_transform(val_tf)
-
-    # Build loaders
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-
-    # Class count
+        
+    # --------------------------------------------------------
+    # APPLY TRANSFORMS 
+    # --------------------------------------------------------   
+    train_ds = TransformSubset(train_subset, train_tf)
+    val_ds   = TransformSubset(val_subset, val_tf)
+    
+    # --------------------------------------------------------
+    # DATALOADERS
+    # --------------------------------------------------------
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=num_workers)
+    val_loader   = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    
+    # --------------------------------------------------------
+    # CLASS COUNT
+    # --------------------------------------------------------
     if isinstance(dataset, ConcatDataset):
         num_classes = len(dataset.datasets[0].classes)
     else:
