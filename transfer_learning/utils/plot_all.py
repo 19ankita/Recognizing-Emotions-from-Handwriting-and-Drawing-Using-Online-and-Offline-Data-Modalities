@@ -7,7 +7,7 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
 from src.dataset import get_dataloaders
-from src.model import build_resnet18, build_resnet50
+from src.model import build_resnet18
 
 from .utils import get_class_names_from_task
 from .utils import get_predictions
@@ -32,10 +32,7 @@ def plot_class_accuracy(task, task_dir, model_path,
     class_names = get_class_names_from_task(task_dir, task)
 
     # Load model
-    if model_name == "resnet18":
-        model = build_resnet18(num_classes, freeze_backbone=False)
-    else:
-        model = build_resnet50(num_classes, freeze_backbone=False)
+    model = build_resnet18(num_classes, freeze_backbone=False)
 
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -82,10 +79,7 @@ def plot_confmat(task, task_dir, model_path,
 
     class_names = get_class_names_from_task(task_dir, task)
 
-    if model_name == "resnet18":
-        model = build_resnet18(num_classes, freeze_backbone=False)
-    else:
-        model = build_resnet50(num_classes, freeze_backbone=False)
+    model = build_resnet18(num_classes, freeze_backbone=False)
 
     model.load_state_dict(torch.load(model_path, map_location="cpu"))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
