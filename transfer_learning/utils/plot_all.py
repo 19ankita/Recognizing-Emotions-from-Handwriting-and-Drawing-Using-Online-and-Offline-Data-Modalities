@@ -186,7 +186,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--task", required=True)
     parser.add_argument("--task_dir", required=True)
-    parser.add_argument("--model", required=True, choices=["resnet18", "resnet50"])
     parser.add_argument("--model_path", required=True)
     parser.add_argument("--history", required=True)
     parser.add_argument("--output_dir", default="outputs")
