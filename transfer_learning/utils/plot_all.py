@@ -16,7 +16,7 @@ from .utils import get_predictions
 # ----------------------------------------------------
 # PER-CLASS ACCURACY
 # ----------------------------------------------------
-def plot_class_accuracy(task, task_dir, model_name, model_path,
+def plot_class_accuracy(task, task_dir, model_path,
                     img_size=224, batch_size=32, val_ratio=0.2,
                     output="outputs/class_accuracy.pdf"):
 
@@ -67,7 +67,7 @@ def plot_class_accuracy(task, task_dir, model_name, model_path,
 # ----------------------------------------------------
 # CONFUSION MATRIX
 # ----------------------------------------------------
-def plot_confmat(task, task_dir, model_name, model_path,
+def plot_confmat(task, task_dir, model_path,
             img_size=224, batch_size=32, val_ratio=0.2,
             output="outputs/confusion_matrix.pdf"):
 
@@ -147,7 +147,6 @@ def plot_lr(history_path, output="outputs/lr_curve.pdf"):
 def run_all_plots(
     task,
     task_dir,
-    model_name,
     model_path,
     history_path,
     output_dir="outputs"
@@ -155,7 +154,6 @@ def run_all_plots(
     plot_class_accuracy(
         task=task,
         task_dir=task_dir,
-        model_name=model_name,
         model_path=model_path,
         output=os.path.join(output_dir, "class_accuracy.pdf")
     )
@@ -163,7 +161,6 @@ def run_all_plots(
     plot_confmat(
         task=task,
         task_dir=task_dir,
-        model_name=model_name,
         model_path=model_path,
         output=os.path.join(output_dir, "confusion_matrix.pdf")
     )
