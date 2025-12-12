@@ -19,6 +19,21 @@ import cv2
 
 torch.backends.cudnn.benchmark = True
 
+
+def get_class_names_from_task(task_root, task_name):
+    """
+    Get class names from a specific EMOTHAW task folder
+    """
+    task_path = os.path.join(task_root, task_name)
+
+    classes = [
+        d for d in os.listdir(task_path)
+        if os.path.isdir(os.path.join(task_path, d))
+    ]
+    classes.sort()
+    return classes
+
+
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
 # ------------------------------------------------------------
@@ -57,7 +72,7 @@ def generate_gradcam(
     model.eval()
 
     device = image_tensor.device
-
+    
     # --------------------------------------------------------
     # Wrap model so Grad-CAM sees ONLY image input
     # --------------------------------------------------------
@@ -141,11 +156,8 @@ def run_train(args):
         val_ratio=args.val_ratio
     )
     
-    # Handles both ImageFolder and Subset
-    if hasattr(val_loader.dataset, "classes"):
-        class_names = val_loader.dataset.classes
-    else:
-        class_names = val_loader.dataset.dataset.classes
+    class_names = get_class_names_from_task(args.task_dir, args.task)
+
 
     # --------------------------------------------------------
     # MODEL SELECTION
