@@ -26,20 +26,19 @@ outputs/ # Metrics, logs, etc.
 
 ## Using CLI
 # Train ResNet18 on ALL tasks: 
-  - python run_train.py --task all --model resnet18 --task_dir data/emothaw
-# Train ResNet18 on task 3:
-  - python run_train.py --task task1 --model resnet18 --task_dir data/emothaw
+  - python run_train.py --task all --model resnet18 --task_dir data/emothaw_tasks
+# Train ResNet18 on task clock drawing task (cdt) (check for the tasks folder names):
+  - python run_train.py --task cdt --model resnet18 --task_dir data/emothaw_tasks
 
 
 ## Plotting the results
 - python plot_training.py --history outputs/history.json
-- python plot_all.py --history outputs/history.json --model outputs/best_model.pth
+## (go to the root folder first)
+- python -m transfer_learning.utils.plot_all --history outputs/history.json --model outputs/best_model_{task_name}_{model_name}.pth --task_dir transfer_learning/data/emothaw_tasks --task {task_name}
 - python visualize_augmentations.py --task all --task_dir data/emothaw_tasks
 
 # Checking class distributions
 - python src/utils/plot_class_distribution.py data/emothaw_tasks/cdt
-
-
 
 ## Requirements
 See `requirements.txt`

@@ -11,6 +11,7 @@ from src.dataset import get_dataloaders
 from src.model import build_resnet18, build_resnet50
 from src.utils import accuracy, save_checkpoint
 from utils.utils import get_class_names_from_task
+from utils.plot_all import run_all_plots
 
 # GradCAM library
 from pytorch_grad_cam import GradCAM
@@ -329,6 +330,19 @@ def run_train(args):
         json.dump(history, f, indent=4)
 
     print("\nTraining complete! History saved to outputs/history.json")
+    
+    print("\nRunning evaluation & plotting...")
+
+    run_all_plots(
+        task=args.task,
+        task_dir=args.task_dir,
+        model_name=args.model,
+        model_path=os.path.join(
+            "outputs", f"best_model_{args.task}_{args.model}.pth"
+        ),
+        history_path="outputs/history.json",
+        output_dir="outputs"
+    )
 
 
 # ------------------------------------------------------------

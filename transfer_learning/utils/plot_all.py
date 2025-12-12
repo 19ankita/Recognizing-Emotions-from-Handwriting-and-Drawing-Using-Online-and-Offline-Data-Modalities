@@ -12,12 +12,13 @@ from src.model import build_resnet18, build_resnet50
 from .utils import get_class_names_from_task
 from .utils import get_predictions
 
+
 # ----------------------------------------------------
 # PER-CLASS ACCURACY
 # ----------------------------------------------------
 def plot_class_accuracy(task, task_dir, model_name, model_path,
-                        img_size=224, batch_size=32, val_ratio=0.2,
-                        output="outputs/class_accuracy.pdf"):
+                    img_size=224, batch_size=32, val_ratio=0.2,
+                    output="outputs/class_accuracy.pdf"):
 
     _, val_loader, num_classes = get_dataloaders(
         task=task,
@@ -67,8 +68,8 @@ def plot_class_accuracy(task, task_dir, model_name, model_path,
 # CONFUSION MATRIX
 # ----------------------------------------------------
 def plot_confmat(task, task_dir, model_name, model_path,
-                 img_size=224, batch_size=32, val_ratio=0.2,
-                 output="outputs/confusion_matrix.pdf"):
+            img_size=224, batch_size=32, val_ratio=0.2,
+            output="outputs/confusion_matrix.pdf"):
 
     _, val_loader, num_classes = get_dataloaders(
         task=task,
@@ -143,20 +144,60 @@ def plot_lr(history_path, output="outputs/lr_curve.pdf"):
     plt.savefig(output, dpi=300)
     print(f"Saved → {output}")
 
+def run_all_plots(
+    task,
+    task_dir,
+    model_name,
+    model_path,
+    history_path,
+    output_dir="outputs"
+):
+    plot_class_accuracy(
+        task=task,
+        task_dir=task_dir,
+        model_name=model_name,
+        model_path=model_path,
+        output=os.path.join(output_dir, "class_accuracy.pdf")
+    )
 
-# ----------------------------------------------------
-# MAIN: No YAML needed
-# ----------------------------------------------------
-if __name__ == "__main__":
-    task = "all"
-    task_dir = "data/emothaw_tasks"
-    model_name = "resnet18"
-    model_path = "outputs/best_model_all_resnet18.pth"
-    history_path = "outputs/history.json"
+    plot_confmat(
+        task=task,
+        task_dir=task_dir,
+        model_name=model_name,
+        model_path=model_path,
+        output=os.path.join(output_dir, "confusion_matrix.pdf")
+    )
 
-    plot_class_accuracy(task, task_dir, model_name, model_path)
-    plot_confmat(task, task_dir, model_name, model_path)
-    plot_early_stopping(history_path)
-    plot_lr(history_path)
+    plot_early_stopping(
+        history_path=history_path,
+        output=os.path.join(output_dir, "early_stopping.pdf")
+    )
+
+    plot_lr(
+        history_path=history_path,
+        output=os.path.join(output_dir, "lr_curve.pdf")
+    )
 
     print("\nAll plots saved in outputs/ folder.\n")
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--task", required=True)
+    parser.add_argument("--task_dir", required=True)
+    parser.add_argument("--model", required=True, choices=["resnet18", "resnet50"])
+    parser.add_argument("--model_path", required=True)
+    parser.add_argument("--history", required=True)
+    parser.add_argument("--output_dir", default="outputs")
+
+    args = parser.parse_args()
+
+    run_all_plots(
+        task=args.task,
+        task_dir=args.task_dir,
+        model_name=args.model,
+        model_path=args.model_path,
+        history_path=args.history,
+        output_dir=args.output_dir
+    )
