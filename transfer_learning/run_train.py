@@ -10,6 +10,7 @@ import math
 from src.dataset import get_dataloaders
 from src.model import build_resnet18, build_resnet50
 from src.utils import accuracy, save_checkpoint
+from utils.utils import get_class_names_from_task
 
 # GradCAM library
 from pytorch_grad_cam import GradCAM
@@ -20,21 +21,6 @@ import cv2
 
 
 torch.backends.cudnn.benchmark = True
-
-
-def get_class_names_from_task(task_root, task_name):
-    """
-    Get class names from a specific EMOTHAW task folder
-    """
-    task_path = os.path.join(task_root, task_name)
-
-    classes = [
-        d for d in os.listdir(task_path)
-        if os.path.isdir(os.path.join(task_path, d))
-    ]
-    classes.sort()
-    return classes
-
 
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler

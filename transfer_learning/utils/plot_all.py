@@ -9,28 +9,8 @@ from sklearn.metrics import confusion_matrix
 from src.dataset import get_dataloaders
 from src.model import build_resnet18, build_resnet50
 
-
-# ----------------------------------------------------
-# HELPER: Get predictions
-# ----------------------------------------------------
-def get_predictions(model, loader, device):
-    model.eval()
-    all_labels = []
-    all_preds = []
-
-    with torch.no_grad():
-        for images, pseudo, labels in loader:
-            images, pseudo = images.to(device), pseudo.to(device)
-            labels = labels.to(device)
-
-            outputs = model(images, pseudo)
-            preds = outputs.argmax(dim=1)
-
-            all_labels.append(labels.cpu().numpy())
-            all_preds.append(preds.cpu().numpy())
-
-    return np.concatenate(all_labels), np.concatenate(all_preds)
-
+from utils.utils import get_class_names_from_task
+from utils.utils import get_predictions
 
 # ----------------------------------------------------
 # PER-CLASS ACCURACY
@@ -48,11 +28,7 @@ def plot_class_accuracy(task, task_dir, model_name, model_path,
         val_ratio=val_ratio
     )
 
-    # Get class names
-    if hasattr(val_loader.dataset.subset, "dataset"):
-        class_names = val_loader.dataset.subset.dataset.classes
-    else:
-        class_names = val_loader.dataset.dataset.classes
+    class_names = get_class_names_from_task(task_dir, task)
 
     # Load model
     if model_name == "resnet18":
@@ -103,10 +79,7 @@ def plot_confmat(task, task_dir, model_name, model_path,
         val_ratio=val_ratio
     )
 
-    if hasattr(val_loader.dataset.subset, "dataset"):
-        class_names = val_loader.dataset.subset.dataset.classes
-    else:
-        class_names = val_loader.dataset.dataset.classes
+    class_names = get_class_names_from_task(task_dir, task)
 
     if model_name == "resnet18":
         model = build_resnet18(num_classes, freeze_backbone=False)
