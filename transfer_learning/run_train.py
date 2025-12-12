@@ -45,7 +45,7 @@ def generate_gradcam(model, image_tensor, pseudo_tensor, save_path, layer_name):
     # pick target layer
     target_layer = dict(model.backbone.named_children())[layer_name]
 
-    cam = GradCAM(model=model, target_layers=[target_layer], use_cuda=True)
+    cam = GradCAM(model=model, target_layers=[target_layer])
 
     grayscale_cam = cam(
         input_tensor=[image_tensor],
