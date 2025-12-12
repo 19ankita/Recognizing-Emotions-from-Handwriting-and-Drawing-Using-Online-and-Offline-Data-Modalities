@@ -14,8 +14,10 @@ from src.utils import accuracy, save_checkpoint
 # GradCAM library
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 import numpy as np
 import cv2
+
 
 torch.backends.cudnn.benchmark = True
 
@@ -85,6 +87,7 @@ def generate_gradcam(
         def forward(self, x):
             return self.model(x, self.pseudo)
 
+    pseudo_tensor = pseudo_tensor.float()
     wrapped_model = ImageOnlyWrapper(model, pseudo_tensor)
 
     # --------------------------------------------------------
@@ -100,13 +103,12 @@ def generate_gradcam(
     # --------------------------------------------------------
     # Compute Grad-CAM
     # --------------------------------------------------------
+    targets = [ClassifierOutputTarget(class_idx)]
+
     grayscale_cam = cam(
         input_tensor=image_tensor,
-        targets=[torch.nn.functional.one_hot(
-            torch.tensor(class_idx), 
-            num_classes=wrapped_model.model.fc.out_features
-        ).float().to(device)]
-    )[0]  # batch index 0
+        targets=targets
+    )[0]
 
     # --------------------------------------------------------
     # Prepare image for visualization
