@@ -195,7 +195,6 @@ if __name__ == "__main__":
     run_all_plots(
         task=args.task,
         task_dir=args.task_dir,
-        model_name=args.model,
         model_path=args.model_path,
         history_path=args.history,
         output_dir=args.output_dir
