@@ -19,6 +19,19 @@ import cv2
 
 torch.backends.cudnn.benchmark = True
 
+def get_class_names(dataset):
+    """
+    Recursively unwrap Subset / TransformSubset
+    until we reach ImageFolder
+    """
+    while hasattr(dataset, "dataset"):
+        dataset = dataset.dataset
+
+    if hasattr(dataset, "classes"):
+        return dataset.classes
+
+    raise AttributeError("Could not find class names in dataset")
+
 
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
@@ -126,7 +139,6 @@ def run_train(args):
     os.makedirs("outputs", exist_ok=True)
     os.makedirs("outputs/gradcam", exist_ok=True)
 
-
     # Select device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device → {device}")
@@ -143,11 +155,8 @@ def run_train(args):
         val_ratio=args.val_ratio
     )
     
-    class_names = (val_loader.dataset.dataset.classes
-        if hasattr(val_loader.dataset, "dataset")
-        else val_loader.dataset.classes
-    )
-    
+    class_names = get_class_names(val_loader.dataset)
+
     # --------------------------------------------------------
     # MODEL SELECTION
     # --------------------------------------------------------
