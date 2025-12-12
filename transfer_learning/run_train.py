@@ -36,32 +36,86 @@ def get_scheduler(optimizer, warmup_epochs, total_epochs):
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
-# ------------------------------------------------------------
-# GradCAM visualization function
-# ------------------------------------------------------------
-def generate_gradcam(model, image_tensor, pseudo_tensor, save_path, layer_name):
+def generate_gradcam(
+    model,
+    image_tensor,
+    pseudo_tensor,
+    class_idx,
+    class_name,
+    save_dir,
+    layer_name="layer4",
+):
+    """
+    Robust Grad-CAM for EMOTHAW (image + pseudo-dynamic features)
+
+    image_tensor : torch.Tensor [1, 3, H, W]
+    pseudo_tensor: torch.Tensor [1, P]
+    class_idx    : int (target class index)
+    class_name   : str (human-readable label)
+    """
+
+    os.makedirs(save_dir, exist_ok=True)
     model.eval()
 
-    # pick target layer
-    target_layer = dict(model.backbone.named_children())[layer_name]
+    device = image_tensor.device
 
-    cam = GradCAM(model=model, target_layers=[target_layer])
+    # --------------------------------------------------------
+    # Wrap model so Grad-CAM sees ONLY image input
+    # --------------------------------------------------------
+    class ImageOnlyWrapper(nn.Module):
+        def __init__(self, model, pseudo_tensor):
+            super().__init__()
+            self.model = model
+            self.pseudo = pseudo_tensor
 
+        def forward(self, x):
+            return self.model(x, self.pseudo)
+
+    wrapped_model = ImageOnlyWrapper(model, pseudo_tensor)
+
+    # --------------------------------------------------------
+    # Select target layer (ResNet-safe)
+    # --------------------------------------------------------
+    target_layer = dict(wrapped_model.model.backbone.named_modules())[layer_name]
+
+    cam = GradCAM(
+        model=wrapped_model,
+        target_layers=[target_layer]
+    )
+
+    # --------------------------------------------------------
+    # Compute Grad-CAM
+    # --------------------------------------------------------
     grayscale_cam = cam(
-        input_tensor=[image_tensor],
-        aug_smooth=True,
-        eigen_smooth=True
-    )[0]  # take batch index 0
+        input_tensor=image_tensor,
+        targets=[torch.nn.functional.one_hot(
+            torch.tensor(class_idx), 
+            num_classes=wrapped_model.model.fc.out_features
+        ).float().to(device)]
+    )[0]  # batch index 0
 
-    # Convert tensor to numpy image
-    img = image_tensor.cpu().permute(1, 2, 0).numpy()
-    img = (img - img.min()) / (img.max() - img.min())
+    # --------------------------------------------------------
+    # Prepare image for visualization
+    # --------------------------------------------------------
+    img = image_tensor[0].detach().cpu().permute(1, 2, 0).numpy()
+    img = (img - img.min()) / (img.max() - img.min() + 1e-8)
 
-    cam_image = show_cam_on_image(img, grayscale_cam, use_rgb=True)
+    cam_image = show_cam_on_image(
+        img,
+        grayscale_cam,
+        use_rgb=True
+    )
+
+    # --------------------------------------------------------
+    # Save (thesis-ready naming)
+    # --------------------------------------------------------
+    filename = f"gradcam_class_{class_idx}_{class_name}.png"
+    save_path = os.path.join(save_dir, filename)
 
     cv2.imwrite(save_path, cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR))
-    
-    
+
+    return save_path
+
     
 # ------------------------------------------------------------
 # Training Function
@@ -70,6 +124,8 @@ def run_train(args):
 
     # Prepare output directory
     os.makedirs("outputs", exist_ok=True)
+    os.makedirs("outputs/gradcam", exist_ok=True)
+
 
     # Select device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -85,6 +141,11 @@ def run_train(args):
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         val_ratio=args.val_ratio
+    )
+    
+    class_names = (val_loader.dataset.dataset.classes
+        if hasattr(val_loader.dataset, "dataset")
+        else val_loader.dataset.classes
     )
     
     # --------------------------------------------------------
@@ -238,23 +299,31 @@ def run_train(args):
                 
             print("Saved new BEST model")
             
-            
-        # ------------------------------------------------------------
-        # GradCAM Visualization for best model
-        # ------------------------------------------------------------
-        sample_image, sample_pseudo, _ = next(iter(val_loader))
-        sample_image = sample_image[0].to(device)
-        sample_pseudo = sample_pseudo[0].to(device)
+            # ------------------------------------------------------------
+            # Grad-CAM Visualization (best model snapshot)
+            # ------------------------------------------------------------
+            model.eval()
 
-        save_path = f"outputs/gradcam/epoch_{epoch+1}_best_cam.jpg"
-        generate_gradcam(
-            model=model,
-            image_tensor=sample_image.unsqueeze(0),
-            pseudo_tensor=sample_pseudo.unsqueeze(0),
-            save_path=save_path,
-            layer_name="layer4"  # most interpretable layer
-        )
-        print(f"GradCAM saved → {save_path}")
+            sample_images, sample_pseudo, sample_labels = next(iter(val_loader))
+
+            img = sample_images[0].unsqueeze(0).to(device)
+            pseudo = sample_pseudo[0].unsqueeze(0).to(device)
+            label = sample_labels[0].item()
+            class_name = class_names[label]
+
+            save_dir = f"outputs/gradcam/epoch_{epoch+1}"
+
+            save_path = generate_gradcam(
+                model=model,
+                image_tensor=img,
+                pseudo_tensor=pseudo,
+                class_idx=label,
+                class_name=class_name,
+                save_dir=save_dir,
+                layer_name="layer4"
+            )
+
+            print(f"Grad-CAM saved → {save_path}")
 
     # Save history file
     with open("outputs/history.json", "w") as f:
@@ -270,7 +339,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--task", type=str, required=True,
-                        help="Select task: 1,2,3,4,5 or 'all' for all tasks combined")
+                        help="Select task: each task name (folder) or 'all' for all tasks combined")
 
     parser.add_argument("--model", type=str, default="resnet18",
                         choices=["resnet18", "resnet50"])
