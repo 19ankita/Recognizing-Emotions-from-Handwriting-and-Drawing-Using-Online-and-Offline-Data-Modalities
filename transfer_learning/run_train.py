@@ -19,20 +19,6 @@ import cv2
 
 torch.backends.cudnn.benchmark = True
 
-def get_class_names(dataset):
-    """
-    Recursively unwrap Subset / TransformSubset
-    until we reach ImageFolder
-    """
-    while hasattr(dataset, "dataset"):
-        dataset = dataset.dataset
-
-    if hasattr(dataset, "classes"):
-        return dataset.classes
-
-    raise AttributeError("Could not find class names in dataset")
-
-
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
 # ------------------------------------------------------------
@@ -155,7 +141,11 @@ def run_train(args):
         val_ratio=args.val_ratio
     )
     
-    class_names = get_class_names(val_loader.dataset)
+    # Handles both ImageFolder and Subset
+    if hasattr(val_loader.dataset, "classes"):
+        class_names = val_loader.dataset.classes
+    else:
+        class_names = val_loader.dataset.dataset.classes
 
     # --------------------------------------------------------
     # MODEL SELECTION
