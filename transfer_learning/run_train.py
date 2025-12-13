@@ -336,13 +336,12 @@ def run_train(args):
     pseudo_vis_dir = "outputs/pseudo_features"
     os.makedirs(pseudo_vis_dir, exist_ok=True)
 
-    # IMPORTANT:
-    # We need an actual image PATH, not a tensor
-    sample_img_path = (
-        Path(args.task_dir)
-        / class_name
-        / os.listdir(Path(args.task_dir) / class_name)[0]
-    )
+    img_dir = Path(args.task_dir) / args.task / class_name
+
+    if not img_dir.exists():
+        raise FileNotFoundError(f"Image directory not found: {img_dir}")
+
+    sample_img_path = next(img_dir.glob("*.png"))
 
     visualize_single_image(
         image_path=sample_img_path,
