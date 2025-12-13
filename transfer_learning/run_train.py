@@ -198,28 +198,28 @@ def run_train(args):
     for epoch in range(args.epochs):
         print(f"\n==== Epoch {epoch+1}/{args.epochs} ====")
 
-        # --------------------------------------------------------
-        # PHASE SWITCH: Unfreeze Backbone at Epoch 10
-        # --------------------------------------------------------
-        if epoch == 3:
-            print("\n>>> Unfreezing backbone for fine-tuning...")
+        # # --------------------------------------------------------
+        # # PHASE SWITCH: Unfreeze Backbone at Epoch 10
+        # # --------------------------------------------------------
+        # if epoch == 3:
+        #     print("\n>>> Unfreezing backbone for fine-tuning...")
 
-            # Unfreeze ALL parameters
-            model.requires_grad_(True)
+        #     # Unfreeze ALL parameters
+        #     model.requires_grad_(True)
 
-            # Rebuild optimizer for full fine-tuning
-            optimizer = optim.AdamW(
-                model.parameters(),
-                lr=1e-5,              # very low LR for fine-tuning
-                weight_decay=1e-4
-            )
+        #     # Rebuild optimizer for full fine-tuning
+        #     optimizer = optim.AdamW(
+        #         model.parameters(),
+        #         lr=1e-5,              # very low LR for fine-tuning
+        #         weight_decay=1e-4
+        #     )
 
-            # Rebuild scheduler for the remaining epochs
-            scheduler = get_scheduler(
-                optimizer,
-                warmup_epochs=0,
-                total_epochs=args.epochs - epoch
-            )
+        #     # Rebuild scheduler for the remaining epochs
+        #     scheduler = get_scheduler(
+        #         optimizer,
+        #         warmup_epochs=0,
+        #         total_epochs=args.epochs - epoch
+        #     )
 
         # --------------------------------------------------------
         # TRAINING PHASE
@@ -369,7 +369,7 @@ def run_train(args):
         output_dir="outputs"
     )
     
-    plot_metrics(history)
+    plot_metrics("outputs/history.json")
     
     visualize_augmentations(args.task, args.task_dir, args.img_size)
 
