@@ -6,6 +6,7 @@ from tqdm import tqdm
 import json
 import os
 import math
+from pathlib import Path
 
 from src.dataset import get_dataloaders
 from src.model import build_resnet18, build_resnet50
@@ -15,6 +16,7 @@ from utils.plot_all import run_all_plots
 from utils.plot_training import plot_metrics
 from utils.visualize_aug import visualize_augmentations
 from src.pseudo_features import extract_pseudo_dynamic_features
+from utils.visualize_pseudodynamic_features import visualize_single_image
 
 # GradCAM library
 from pytorch_grad_cam import GradCAM
@@ -327,6 +329,28 @@ def run_train(args):
             )
 
             print(f"Grad-CAM saved → {save_path}")
+            
+    # ------------------------------------------------------------
+    # Pseudo-Dynamic Feature Visualization (single sample)
+    # ------------------------------------------------------------
+    pseudo_vis_dir = "outputs/pseudo_features"
+    os.makedirs(pseudo_vis_dir, exist_ok=True)
+
+    # IMPORTANT:
+    # We need an actual image PATH, not a tensor
+    sample_img_path = (
+        Path(args.task_dir)
+        / class_name
+        / os.listdir(Path(args.task_dir) / class_name)[0]
+    )
+
+    visualize_single_image(
+        image_path=sample_img_path,
+        save_dir=pseudo_vis_dir
+    )
+
+    print("Pseudo-dynamic feature visualization saved.")
+
 
     # Save history file
     with open("outputs/history.json", "w") as f:
