@@ -125,18 +125,3 @@ def visualize_augmentations(task, task_dir, img_size):
     print(f"Saved augmentation visualization → {output_path}")
     plt.show()
 
-
-# -----------------------------------------------------
-# ENTRY POINT
-# -----------------------------------------------------
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--task", type=str, default="all")
-    parser.add_argument("--task_dir", type=str, required=True)
-    parser.add_argument("--img_size", type=int, default=224)
-
-    args = parser.parse_args()
-
-    visualize_augmentations(args.task, args.task_dir, args.img_size)

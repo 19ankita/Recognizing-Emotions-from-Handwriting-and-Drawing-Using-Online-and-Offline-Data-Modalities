@@ -12,6 +12,9 @@ from src.model import build_resnet18, build_resnet50
 from src.utils import accuracy, save_checkpoint
 from utils.utils import get_class_names_from_task
 from utils.plot_all import run_all_plots
+from utils.plot_training import plot_metrics
+from utils.visualize_aug import visualize_augmentations
+from src.pseudo_features import extract_pseudo_dynamic_features
 
 # GradCAM library
 from pytorch_grad_cam import GradCAM
@@ -343,6 +346,10 @@ def run_train(args):
         history_path="outputs/history.json",
         output_dir="outputs"
     )
+    
+    plot_metrics(history)
+    
+    visualize_augmentations(args.task, args.task_dir, args.img_size)
 
 
 # ------------------------------------------------------------

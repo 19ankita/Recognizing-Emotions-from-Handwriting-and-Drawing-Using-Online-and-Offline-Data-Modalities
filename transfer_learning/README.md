@@ -34,7 +34,7 @@ outputs/ # Metrics, logs, etc.
 ## Plotting the results
 - python plot_training.py --history outputs/history.json
 ## (go to the root folder first)
-- python -m transfer_learning.utils.plot_all --history outputs/history.json --model outputs/best_model_{task_name}_{model_name}.pth --task_dir transfer_learning/data/emothaw_tasks --task {task_name}
+## python -m transfer_learning.utils.plot_all --history outputs/history.json --model outputs/best_model_{task_name}_{model_name}.pth --task_dir transfer_learning/data/emothaw_tasks --task {task_name}
 - python visualize_augmentations.py --task all --task_dir data/emothaw_tasks
 
 # Checking class distributions

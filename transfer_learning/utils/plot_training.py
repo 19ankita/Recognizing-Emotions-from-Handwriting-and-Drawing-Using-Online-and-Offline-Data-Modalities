@@ -69,10 +69,3 @@ def plot_metrics(history_file, output_path="outputs/training_plot.png", smoothin
     plt.savefig(pdf_path, bbox_inches="tight")
     print(f"Saved high-quality PDF → {pdf_path}")
 
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--history", required=True)
-    args = parser.parse_args()
-
-    plot_metrics(args.history)

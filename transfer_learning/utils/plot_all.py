@@ -170,23 +170,3 @@ def run_all_plots(
     )
 
     print("\nAll plots saved in outputs/ folder.\n")
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--task", required=True)
-    parser.add_argument("--task_dir", required=True)
-    parser.add_argument("--model_path", required=True)
-    parser.add_argument("--history", required=True)
-    parser.add_argument("--output_dir", default="outputs")
-
-    args = parser.parse_args()
-
-    run_all_plots(
-        task=args.task,
-        task_dir=args.task_dir,
-        model_path=args.model_path,
-        history_path=args.history,
-        output_dir=args.output_dir
-    )
