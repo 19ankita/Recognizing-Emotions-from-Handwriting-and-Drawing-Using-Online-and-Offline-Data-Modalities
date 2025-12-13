@@ -362,7 +362,6 @@ def run_train(args):
     run_all_plots(
         task=args.task,
         task_dir=args.task_dir,
-        model_name=args.model,
         model_path=os.path.join(
             "outputs", f"best_model_{args.task}_{args.model}.pth"
         ),
