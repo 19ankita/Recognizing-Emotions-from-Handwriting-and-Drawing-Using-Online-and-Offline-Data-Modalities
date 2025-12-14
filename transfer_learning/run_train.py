@@ -18,13 +18,6 @@ from utils.visualize_aug import visualize_augmentations
 from src.pseudo_features import extract_pseudo_dynamic_features
 from utils.visualize_pseudodynamic_features import visualize_single_image
 
-# GradCAM library
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-import numpy as np
-import cv2
-
 
 torch.backends.cudnn.benchmark = True
 
@@ -43,87 +36,6 @@ def get_scheduler(optimizer, warmup_epochs, total_epochs):
 
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
-
-def generate_gradcam(
-    model,
-    image_tensor,
-    pseudo_tensor,
-    class_idx,
-    class_name,
-    save_dir,
-    layer_name="layer4",
-):
-    """
-    Robust Grad-CAM for EMOTHAW (image + pseudo-dynamic features)
-
-    image_tensor : torch.Tensor [1, 3, H, W]
-    pseudo_tensor: torch.Tensor [1, P]
-    class_idx    : int (target class index)
-    class_name   : str (human-readable label)
-    """
-
-    os.makedirs(save_dir, exist_ok=True)
-    model.eval()
-
-    device = image_tensor.device
-    
-    # --------------------------------------------------------
-    # Wrap model so Grad-CAM sees ONLY image input
-    # --------------------------------------------------------
-    class ImageOnlyWrapper(nn.Module):
-        def __init__(self, model, pseudo_tensor):
-            super().__init__()
-            self.model = model
-            self.pseudo = pseudo_tensor
-
-        def forward(self, x):
-            return self.model(x, self.pseudo)
-
-    pseudo_tensor = pseudo_tensor.float()
-    wrapped_model = ImageOnlyWrapper(model, pseudo_tensor)
-
-    # --------------------------------------------------------
-    # Select target layer (ResNet-safe)
-    # --------------------------------------------------------
-    target_layer = dict(wrapped_model.model.backbone.named_modules())[layer_name]
-
-    cam = GradCAM(
-        model=wrapped_model,
-        target_layers=[target_layer]
-    )
-
-    # --------------------------------------------------------
-    # Compute Grad-CAM
-    # --------------------------------------------------------
-    targets = [ClassifierOutputTarget(class_idx)]
-
-    grayscale_cam = cam(
-        input_tensor=image_tensor,
-        targets=targets
-    )[0]
-
-    # --------------------------------------------------------
-    # Prepare image for visualization
-    # --------------------------------------------------------
-    img = image_tensor[0].detach().cpu().permute(1, 2, 0).numpy()
-    img = (img - img.min()) / (img.max() - img.min() + 1e-8)
-
-    cam_image = show_cam_on_image(
-        img,
-        grayscale_cam,
-        use_rgb=True
-    )
-
-    # --------------------------------------------------------
-    # Save (thesis-ready naming)
-    # --------------------------------------------------------
-    filename = f"gradcam_class_{class_idx}_{class_name}.png"
-    save_path = os.path.join(save_dir, filename)
-
-    cv2.imwrite(save_path, cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR))
-
-    return save_path
-
     
 # ------------------------------------------------------------
 # Training Function
@@ -132,7 +44,6 @@ def run_train(args):
 
     # Prepare output directory
     os.makedirs("outputs", exist_ok=True)
-    os.makedirs("outputs/gradcam", exist_ok=True)
 
     # Select device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -159,8 +70,6 @@ def run_train(args):
     print(f"\n>>> Building model: {args.model}")
     if args.model == "resnet18":
         model = build_resnet18(num_classes, freeze_backbone=args.freeze_backbone)
-    elif args.model == "resnet50":
-        model = build_resnet50(num_classes, freeze_backbone=args.freeze_backbone)
     else:
         raise ValueError("Unknown model: choose resnet18 or resnet50")
 
@@ -170,14 +79,14 @@ def run_train(args):
     # Loss function
     criterion = nn.CrossEntropyLoss()
 
-    # Optimizer (Phase 1: classifier-only or full model depending on freeze_backbone)
+    # Optimizer 
     optimizer = optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=args.lr,
         weight_decay=1e-4
     )
 
-    # Scheduler for Phase 1
+    # Scheduler 
     scheduler = get_scheduler(
         optimizer,
         warmup_epochs=2,
@@ -197,29 +106,6 @@ def run_train(args):
     # ------------------------------------------------------------
     for epoch in range(args.epochs):
         print(f"\n==== Epoch {epoch+1}/{args.epochs} ====")
-
-        # # --------------------------------------------------------
-        # # PHASE SWITCH: Unfreeze Backbone at Epoch 10
-        # # --------------------------------------------------------
-        # if epoch == 3:
-        #     print("\n>>> Unfreezing backbone for fine-tuning...")
-
-        #     # Unfreeze ALL parameters
-        #     model.requires_grad_(True)
-
-        #     # Rebuild optimizer for full fine-tuning
-        #     optimizer = optim.AdamW(
-        #         model.parameters(),
-        #         lr=1e-5,              # very low LR for fine-tuning
-        #         weight_decay=1e-4
-        #     )
-
-        #     # Rebuild scheduler for the remaining epochs
-        #     scheduler = get_scheduler(
-        #         optimizer,
-        #         warmup_epochs=0,
-        #         total_epochs=args.epochs - epoch
-        #     )
 
         # --------------------------------------------------------
         # TRAINING PHASE
@@ -304,39 +190,13 @@ def run_train(args):
                 
             print("Saved new BEST model")
             
-            # ------------------------------------------------------------
-            # Grad-CAM Visualization (best model snapshot)
-            # ------------------------------------------------------------
-            model.eval()
-
-            sample_images, sample_pseudo, sample_labels = next(iter(val_loader))
-
-            img = sample_images[0].unsqueeze(0).to(device)
-            pseudo = sample_pseudo[0].unsqueeze(0).to(device)
-            label = sample_labels[0].item()
-            class_name = class_names[label]
-
-            save_dir = f"outputs/gradcam/epoch_{epoch+1}"
-
-            save_path = generate_gradcam(
-                model=model,
-                image_tensor=img,
-                pseudo_tensor=pseudo,
-                class_idx=label,
-                class_name=class_name,
-                save_dir=save_dir,
-                layer_name="layer4"
-            )
-
-            print(f"Grad-CAM saved → {save_path}")
-            
     # ------------------------------------------------------------
     # Pseudo-Dynamic Feature Visualization (single sample)
     # ------------------------------------------------------------
     pseudo_vis_dir = "outputs/pseudo_features"
     os.makedirs(pseudo_vis_dir, exist_ok=True)
 
-    img_dir = Path(args.task_dir) / args.task / class_name
+    img_dir = Path(args.task_dir) / args.task / class_names
 
     if not img_dir.exists():
         raise FileNotFoundError(f"Image directory not found: {img_dir}")
@@ -372,7 +232,8 @@ def run_train(args):
     plot_metrics("outputs/history.json")
     
     visualize_augmentations(args.task, args.task_dir, args.img_size)
-
+    
+    print("\nRunning stress diagnostics...")
 
 # ------------------------------------------------------------
 # CLI
