@@ -9,8 +9,8 @@ from sklearn.metrics import confusion_matrix
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
 
-from .utils import get_class_names_from_task
-from .utils import get_predictions
+from .helper import get_class_names_from_task
+from .helper import get_predictions
 
 
 # ----------------------------------------------------
