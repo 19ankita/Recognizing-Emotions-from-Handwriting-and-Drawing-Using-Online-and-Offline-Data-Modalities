@@ -9,7 +9,7 @@ import umap
 
 from src.dataset import get_dataloaders
 from src.model import build_resnet18, build_resnet50
-from .helper import get_class_names_from_task
+from utils.helper import get_class_names_from_task
 
 
 # ------------------------------------------------------------
