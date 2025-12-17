@@ -53,10 +53,7 @@ def main(args):
     class_names = get_class_names_from_task(args.task_dir, args.task)
 
     # Load frozen CNN
-    if args.model == "resnet18":
-        model = build_resnet18(num_classes, freeze_backbone=True)
-    else:
-        model = build_resnet50(num_classes, freeze_backbone=True)
+    model = build_resnet18(num_classes, freeze_backbone=True)
 
     model.load_state_dict(
         torch.load(args.checkpoint, map_location=device)

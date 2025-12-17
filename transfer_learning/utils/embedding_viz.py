@@ -139,14 +139,23 @@ def main(args):
     os.makedirs(args.output_dir, exist_ok=True)
     save_path = os.path.join(
         args.output_dir,
-        f"{args.method}_{args.task}_{args.model}.png"
+        f"{args.method}_{args.task}_{args.model}.pdf"
     )
 
     plot_embeddings(X_2d, y, class_names, args.method, save_path)
     
-    plot_stress_binary_tsne(X_2d, y, class_names, save_path)
+    # --------------------------------------------------
+    # Stress vs Non-Stress t-SNE
+    # --------------------------------------------------
+    save_path_binary = os.path.join(
+        args.output_dir,
+        f"{args.method}_{args.task}_{args.model}_stress_binary.pdf"
+    )
+    plot_stress_binary_tsne(X_2d, y, class_names, save_path_binary)
     
-    print("Saved embedding visualization →", save_path)
+    print("Saved embedding visualizations:")
+    print(" -", save_path)
+    print(" -", save_path_binary)
 
 
 # ------------------------------------------------------------
