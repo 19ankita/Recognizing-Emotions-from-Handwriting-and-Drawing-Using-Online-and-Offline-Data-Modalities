@@ -55,6 +55,40 @@ def plot_embeddings(X, y, class_names, method, save_path):
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
     plt.close()
+    
+def plot_stress_binary_tsne(X_2d, y, class_names, save_path):
+    """
+    Stress vs Non-Stress visualization
+    """
+
+    stress_idx = class_names.index("stress")
+
+    binary_labels = (y == stress_idx).astype(int)
+
+    plt.figure(figsize=(7, 6))
+
+    plt.scatter(
+        X_2d[binary_labels == 0, 0],
+        X_2d[binary_labels == 0, 1],
+        label="Non-Stress",
+        alpha=0.4,
+        s=20
+    )
+
+    plt.scatter(
+        X_2d[binary_labels == 1, 0],
+        X_2d[binary_labels == 1, 1],
+        label="Stress",
+        alpha=0.6,
+        s=30
+    )
+
+    plt.legend()
+    plt.title("Stress vs Non-Stress (t-SNE)")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+
 
 
 # ------------------------------------------------------------
@@ -109,7 +143,9 @@ def main(args):
     )
 
     plot_embeddings(X_2d, y, class_names, args.method, save_path)
-
+    
+    plot_stress_binary_tsne(X_2d, y, class_names, save_path)
+    
     print("Saved embedding visualization →", save_path)
 
 
