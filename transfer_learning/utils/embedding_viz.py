@@ -5,7 +5,7 @@ import os
 import matplotlib.pyplot as plt
 
 from sklearn.manifold import TSNE
-import umap
+from sklearn.metrics import pairwise_distances
 
 from src.dataset import get_dataloaders
 from src.model import build_resnet18, build_resnet50
@@ -90,6 +90,50 @@ def plot_stress_binary_tsne(X_2d, y, class_names, save_path):
     plt.close()
 
 
+def plot_centroids_and_distances(X_2d, y, class_names, save_path):
+    """
+    X_2d: (N, 2) t-SNE embeddings
+    y:    (N,) class labels
+    """
+
+    centroids = {}
+
+    # Compute centroids
+    for idx, name in enumerate(class_names):
+        centroids[name] = X_2d[y == idx].mean(axis=0)
+
+    # Plot points
+    plt.figure(figsize=(7, 6))
+    for idx, name in enumerate(class_names):
+        plt.scatter(
+            X_2d[y == idx, 0],
+            X_2d[y == idx, 1],
+            label=name,
+            alpha=0.4,
+            s=20
+        )
+
+    # Plot centroids
+    for name, c in centroids.items():
+        plt.scatter(c[0], c[1], marker="X", s=200, edgecolor="k")
+        plt.text(c[0], c[1], name, fontsize=10, weight="bold")
+
+    plt.legend()
+    plt.title("t-SNE with Class Centroids")
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300)
+    plt.close()
+
+    # Print centroid distances
+    print("\nCentroid distances:")
+    centroid_matrix = np.vstack(list(centroids.values()))
+    dist = pairwise_distances(centroid_matrix)
+
+    for i, ci in enumerate(class_names):
+        for j, cj in enumerate(class_names):
+            if i < j:
+                print(f"{ci} ↔ {cj}: {dist[i, j]:.2f}")
+
 
 # ------------------------------------------------------------
 # Main
@@ -112,10 +156,7 @@ def main(args):
     class_names = get_class_names_from_task(args.task_dir, args.task)
 
     # Build model
-    if args.model == "resnet18":
-        model = build_resnet18(num_classes, freeze_backbone=True)
-    else:
-        model = build_resnet50(num_classes, freeze_backbone=True)
+    model = build_resnet18(num_classes, freeze_backbone=True)
 
     model = model.to(device)
 
@@ -130,8 +171,6 @@ def main(args):
     # Dimensionality reduction
     if args.method == "tsne":
         reducer = TSNE(n_components=2, perplexity=30, random_state=42)
-    else:
-        reducer = umap.UMAP(n_components=2, random_state=42)
 
     X_2d = reducer.fit_transform(X)
 
@@ -153,9 +192,20 @@ def main(args):
     )
     plot_stress_binary_tsne(X_2d, y, class_names, save_path_binary)
     
+    # --------------------------------------------------
+    # centroid analysis
+    # --------------------------------------------------
+    save_path_centroid = os.path.join(
+        args.output_dir,
+        f"{args.method}_{args.task}_{args.model}_centroids.pdf"
+    )
+    
+    plot_centroids_and_distances(X_2d, y, class_names, save_path_centroid)
+    
     print("Saved embedding visualizations:")
     print(" -", save_path)
     print(" -", save_path_binary)
+    print(" -", save_path_centroid)
 
 
 # ------------------------------------------------------------
@@ -166,10 +216,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--task", type=str, required=True)
     parser.add_argument("--task_dir", type=str, required=True)
-    parser.add_argument("--model", type=str, choices=["resnet18", "resnet50"])
+    parser.add_argument("--model", type=str, choices=["resnet18"])
     parser.add_argument("--checkpoint", type=str, required=True)
 
-    parser.add_argument("--method", type=str, choices=["tsne", "umap"], default="tsne")
+    parser.add_argument("--method", type=str, choices=["tsne"], default="tsne")
 
     parser.add_argument("--img_size", type=int, default=224)
     parser.add_argument("--batch_size", type=int, default=32)
