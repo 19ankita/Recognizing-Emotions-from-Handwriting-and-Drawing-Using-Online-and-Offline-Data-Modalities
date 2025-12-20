@@ -94,7 +94,7 @@ def run_train(args):
     )
 
     # Mixed precision scaler
-    scaler = torch.amp.GradScaler(device="cuda")
+    scaler = torch.amp.GradScaler(enabled=torch.cuda.is_available())
 
     # Training history storage
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": [], "lr": []}
@@ -195,8 +195,11 @@ def run_train(args):
     # ------------------------------------------------------------
     pseudo_vis_dir = "outputs/pseudo_features"
     os.makedirs(pseudo_vis_dir, exist_ok=True)
+    
+    for class_name in class_names:
+        img_dir = Path(args.task_dir) / args.task / class_name
 
-    img_dir = Path(args.task_dir) / args.task / class_names
+        images = list(img_dir.glob("*.png"))
 
     if not img_dir.exists():
         raise FileNotFoundError(f"Image directory not found: {img_dir}")
