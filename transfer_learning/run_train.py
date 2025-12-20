@@ -9,9 +9,9 @@ import math
 from pathlib import Path
 
 from src.dataset import get_dataloaders
-from src.model import build_resnet18, build_resnet50
+from src.model import build_resnet18
 from src.utils import accuracy, save_checkpoint
-from transfer_learning.utils.helper import get_class_names_from_task
+from utils.helper import get_class_names_from_task
 from utils.plot_all import run_all_plots
 from utils.plot_training import plot_metrics
 from utils.visualize_aug import visualize_augmentations
