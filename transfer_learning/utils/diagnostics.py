@@ -7,7 +7,7 @@ import os
 from sklearn.metrics import confusion_matrix, classification_report
 
 from src.dataset import get_dataloaders
-from src.model import build_resnet18, build_resnet50
+from src.model import build_resnet18
 from utils.helper import get_class_names_from_task
 
 
@@ -95,10 +95,7 @@ def main(args):
     class_names = get_class_names_from_task(args.task_dir, args.task)
 
     # Build model
-    if args.model == "resnet18":
-        model = build_resnet18(num_classes, freeze_backbone=True)
-    else:
-        model = build_resnet50(num_classes, freeze_backbone=True)
+    model = build_resnet18(num_classes, freeze_backbone=True)
 
     model = model.to(device)
 
@@ -126,7 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("--task_dir", type=str, required=True)
 
     parser.add_argument("--model", type=str,
-                        choices=["resnet18", "resnet50"],
+                        choices=["resnet18"],
                         required=True)
 
     parser.add_argument("--checkpoint", type=str, required=True)
