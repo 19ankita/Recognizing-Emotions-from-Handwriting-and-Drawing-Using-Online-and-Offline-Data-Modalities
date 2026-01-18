@@ -15,6 +15,18 @@ from src.training_models import run_model, run_multioutput_model, run_separate_s
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 
+# ===================== PATH SETUP (FIX) =====================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+dataset_dir  = os.path.join(BASE_DIR, "dataset")
+labels_dir   = os.path.join(BASE_DIR, "labels")
+features_dir = os.path.join(BASE_DIR, "features")
+results_dir  = os.path.join(BASE_DIR, "results")
+
+print("BASE_DIR:", BASE_DIR)
+print("DATASET_DIR exists?", os.path.exists(dataset_dir))
+# ===========================================================
+
 
 def extract_user_number(x):
     """Extract user number from feature id (e.g. u00025s00001_hw00003 → 25)."""
@@ -23,7 +35,7 @@ def extract_user_number(x):
 
 def prepare_labels():
     """Clean the DASS Excel file and save to labels/DASS_scores_clean.csv"""
-    labels_dir = "labels"
+
     os.makedirs(labels_dir, exist_ok=True)
     
     output_file = os.path.join(labels_dir, "DASS_scores_clean.csv")
@@ -34,7 +46,7 @@ def prepare_labels():
     
     print("Preparing DASS labels...")
     
-    dass = pd.read_excel("DASS_scores.xls",engine="xlrd")
+    dass = pd.read_excel(os.path.join(BASE_DIR, "DASS_scores.xls"),engine="xlrd")
     
     # Keep relevant columns
     dass_clean = dass.loc[:, ["File Number user", "depression", "anxiety", "stress"]].copy()
@@ -70,7 +82,7 @@ def main():
 
     # Select tasks
     if args.all_tasks:
-        tasks = [t for t in os.listdir("dataset") if os.path.isdir(os.path.join("dataset", t))]
+        tasks = [t for t in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, t))]
         print(f"\nDetected tasks automatically: {tasks}")
     else:
         tasks = args.tasks
@@ -82,6 +94,7 @@ def main():
     
     # Load cleaned DASS labels 
     labels = prepare_labels()
+    os.makedirs(features_dir, exist_ok=True)
     results = []
     
     # Define models
@@ -113,9 +126,9 @@ def main():
         models.append((model, name))
     
     for task in tasks:
-        input_dir = os.path.join("dataset", task)
-        output_csv = os.path.join("features", f"{task}_features.csv")
-        merged_csv = os.path.join("features", f"{task}_with_dass.csv")
+        input_dir = os.path.join(dataset_dir, task)
+        output_csv = os.path.join(features_dir, f"{task}_features.csv")
+        merged_csv = os.path.join(features_dir, f"{task}_with_dass.csv")
         
         if not os.path.exists(input_dir):
             print(f"Task folder not found: {input_dir}, skipping")
@@ -180,7 +193,6 @@ def main():
                    
     
     if results:
-        results_dir = "results"
         os.makedirs(results_dir, exist_ok=True)
         summary_csv = os.path.join(results_dir, "model_summary.csv")
         pd.DataFrame(results).to_csv(summary_csv, index=False)
