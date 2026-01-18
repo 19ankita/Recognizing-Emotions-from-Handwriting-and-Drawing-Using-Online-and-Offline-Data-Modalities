@@ -8,17 +8,6 @@ def euclidean_dist(x1, y1, x2,  y2):
 def path_length(x, y):
     return np.sum(np.sqrt(np.diff(x)**2 + np.diff(y)**2))
 
-def instantaneous_speed(x, y, t):
-    dt = np.diff(t)
-    dx = np.diff(x)
-    dy = np.diff(y)
-    
-    valid = dt > 0
-    vx = np.divide(dx[valid], dt[valid])
-    vy = np.divide(dy[valid], dt[valid])
-    
-    return np.sqrt(vx**2 + vy**2)
-
 def straightness(x, y, pen_down):
     """
     Straightness computed on pen-down trajectory only.
@@ -220,10 +209,25 @@ def extract_features(df):
     
     
     # --- Kinematic ---
-    speeds = instantaneous_speed(x, y, t)
-    features["path_length"] = path_length(x, y)
+    dx = np.diff(x)
+    dy = np.diff(y)
+    dt = np.diff(t)
 
-    speeds_down = speeds[pen_down[1:]]
+    valid = dt > 0
+    if np.any(valid):
+        vx = dx[valid] / dt[valid]
+        vy = dy[valid] / dt[valid]
+        speeds = np.sqrt(vx**2 + vy**2)
+
+        pen_down_valid = pen_down[1:][valid]
+        speeds_down = speeds[pen_down_valid]
+    else:
+        speeds_down = np.array([])
+
+    features["path_length"] = (
+        path_length(x[pen_down], y[pen_down]) if np.any(pen_down) else 0.0
+    )
+
     features["median_speed"] = np.median(speeds_down) if len(speeds_down) else 0
 
     features["p95_speed"] = np.percentile(speeds_down, 95) if len(speeds_down) else 0

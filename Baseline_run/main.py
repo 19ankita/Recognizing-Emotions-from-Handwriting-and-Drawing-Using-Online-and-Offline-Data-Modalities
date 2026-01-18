@@ -15,16 +15,14 @@ from src.training_models import run_model, run_multioutput_model, run_separate_s
 from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 
-# ===================== PATH SETUP (FIX) =====================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# ===================== PATH SETUP  =====================
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
-dataset_dir  = os.path.join(BASE_DIR, "dataset")
-labels_dir   = os.path.join(BASE_DIR, "labels")
-features_dir = os.path.join(BASE_DIR, "features")
-results_dir  = os.path.join(BASE_DIR, "results")
+dataset_dir  = os.path.join(base_dir, "dataset")
+labels_dir   = os.path.join(base_dir, "labels")
+features_dir = os.path.join(base_dir, "features")
+results_dir  = os.path.join(base_dir, "results")
 
-print("BASE_DIR:", BASE_DIR)
-print("DATASET_DIR exists?", os.path.exists(dataset_dir))
 # ===========================================================
 
 
@@ -46,7 +44,7 @@ def prepare_labels():
     
     print("Preparing DASS labels...")
     
-    dass = pd.read_excel(os.path.join(BASE_DIR, "DASS_scores.xls"),engine="xlrd")
+    dass = pd.read_excel(os.path.join(base_dir, "DASS_scores.xls"),engine="xlrd")
     
     # Keep relevant columns
     dass_clean = dass.loc[:, ["File Number user", "depression", "anxiety", "stress"]].copy()
