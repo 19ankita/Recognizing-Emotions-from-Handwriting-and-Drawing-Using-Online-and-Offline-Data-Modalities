@@ -193,10 +193,10 @@ def extract_features(df):
     # --- Temporal ---
     pen_down = status == 1
     pen_up = ~pen_down
-    dt = np.diff(t, prepend=t[0])
+    dt_full = np.diff(t, prepend=t[0])
     
-    features["F1_in_air_time"] = np.sum(dt[pen_up])
-    features["F2_on_paper_time"] = np.sum(dt[pen_down])
+    features["F1_in_air_time"] = np.sum(dt_full[pen_up])
+    features["F2_on_paper_time"] = np.sum(dt_full[pen_down])
     features["F3_total_time"] = t[-1] - t[0]
     features["F4_stroke_count"] = np.sum(np.diff(status) == 1) + 1
     
@@ -211,12 +211,12 @@ def extract_features(df):
     # --- Kinematic ---
     dx = np.diff(x)
     dy = np.diff(y)
-    dt = np.diff(t)
+    dt_diff = np.diff(t)
 
-    valid = dt > 0
+    valid = dt_diff > 0
     if np.any(valid):
-        vx = dx[valid] / dt[valid]
-        vy = dy[valid] / dt[valid]
+        vx = dx[valid] / dt_diff[valid]
+        vy = dy[valid] / dt_diff[valid]
         speeds = np.sqrt(vx**2 + vy**2)
 
         pen_down_valid = pen_down[1:][valid]
@@ -362,7 +362,7 @@ def extract_features(df):
     penup_durations = []
     current = 0.0
 
-    for d, up in zip(dt, pen_up):
+    for d, up in zip(dt_full, pen_up):
         if up:
             current += d
         else:
@@ -375,7 +375,7 @@ def extract_features(df):
 
     penup_durations = np.array(penup_durations)
 
-    features["penup_time_total"] = np.sum(dt[pen_up])
+    features["penup_time_total"] = np.sum(dt_full[pen_up])
     features["penup_time_ratio"] = (
         features["penup_time_total"] / features["F3_total_time"]
         if features["F3_total_time"] > 0 else 0
