@@ -4,6 +4,7 @@ from src.feature_utils import extract_features, segment_lines
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
     
 def plot_trajectory(df, title="Trajectory"):
@@ -22,6 +23,12 @@ def plot_trajectory(df, title="Trajectory"):
     plt.title(title)
     plt.xlabel("x")
     plt.ylabel("y")
+    if save:
+        os.makedirs(save_dir, exist_ok=True)
+        filename = title.replace(" ", "_").replace("–", "-").lower()
+        save_path = os.path.join(save_dir, f"{filename}_trajectory.pdf")
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Saved figure to: {save_path}")
     plt.show()
 
 
@@ -40,6 +47,12 @@ def plot_baselines(df, lines, title="Baselines"):
     plt.gca().invert_yaxis()
     plt.axis("equal")
     plt.title(title)
+    if save:
+        os.makedirs(save_dir, exist_ok=True)
+        filename = title.replace(" ", "_").replace("–", "-").lower()
+        save_path = os.path.join(save_dir, f"{filename}_baseline.pdf")
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Saved figure to: {save_path}")
     plt.show()    
 
 
@@ -57,8 +70,8 @@ def feature_explore():
     for k,v in features.items():
         print(f"{k:30s} : {v:.4f}")
         
-    plot_trajectory(df, title="Word – Trajectory")
+    plot_trajectory(df, title="Word – Trajectory", save=True)
 
     pen_down = df["pen_status"].values == 1
     lines = segment_lines(df["x"].values, df["y"].values, pen_down)
-    plot_baselines(df, lines, title="Word – Baselines")
+    plot_baselines(df, lines, title="Word – Baselines", save=True)
