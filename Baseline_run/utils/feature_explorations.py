@@ -6,8 +6,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
+dataset_dir = os.path.join(base_dir, "dataset", "words")
+figures_dir = os.path.join(base_dir, "figures")
+
     
-def plot_trajectory(df, title="Trajectory"):
+def plot_trajectory(df, title="Trajectory", save_dir=figures_dir):
     x = df["x"].values
     y = df["y"].values
     pen_down = df["pen_status"].values == 1
@@ -32,7 +36,7 @@ def plot_trajectory(df, title="Trajectory"):
     plt.show()
 
 
-def plot_baselines(df, lines, title="Baselines"):
+def plot_baselines(df, lines, title="Baselines", save_dir=figures_dir):
     plt.figure(figsize=(6, 6))
 
     for x_l, y_l in lines:
@@ -58,7 +62,7 @@ def plot_baselines(df, lines, title="Baselines"):
 
 def feature_explore():
     
-    data = read_all_svc_files("Baseline_run/dataset/words")
+    data = read_all_svc_files(dataset_dir)
 
     sample_id, arr = next(iter(data.items()))
     df = pd.DataFrame(arr, columns=["x", "y", "timestamp", "pen_status", "azimuth", "altitude", "pressure"])
