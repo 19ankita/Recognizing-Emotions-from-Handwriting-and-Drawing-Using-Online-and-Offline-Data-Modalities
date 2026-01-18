@@ -11,7 +11,7 @@ dataset_dir = os.path.join(base_dir, "dataset", "words")
 figures_dir = os.path.join(base_dir, "figures")
 
     
-def plot_trajectory(df, title="Trajectory", save_dir=figures_dir):
+def plot_trajectory(df, title="Trajectory", save=False, save_dir=figures_dir):
     x = df["x"].values
     y = df["y"].values
     pen_down = df["pen_status"].values == 1
@@ -36,7 +36,7 @@ def plot_trajectory(df, title="Trajectory", save_dir=figures_dir):
     plt.show()
 
 
-def plot_baselines(df, lines, title="Baselines", save_dir=figures_dir):
+def plot_baselines(df, lines, title="Baselines", save=False, save_dir=figures_dir):
     plt.figure(figsize=(6, 6))
 
     for x_l, y_l in lines:
