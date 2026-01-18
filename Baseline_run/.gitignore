@@ -12,7 +12,7 @@ env/
 
 # Large data files
 #dataset/
-features/
+#features/
 results/
 labels/*.xls
 
