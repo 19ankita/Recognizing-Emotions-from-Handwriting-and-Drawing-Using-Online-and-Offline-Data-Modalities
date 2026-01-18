@@ -356,6 +356,41 @@ def extract_features(df):
         area = 0
     features["ink_density"] = features["path_length"] / area if area > 0 else 0  
     
+  # ================= Pen-up (In-air) features =================
+
+    # Segment pen-up durations
+    penup_durations = []
+    current = 0.0
+
+    for d, up in zip(dt, pen_up):
+        if up:
+            current += d
+        else:
+            if current > 0:
+                penup_durations.append(current)
+                current = 0.0
+
+    if current > 0:
+        penup_durations.append(current)
+
+    penup_durations = np.array(penup_durations)
+
+    features["penup_time_total"] = np.sum(dt[pen_up])
+    features["penup_time_ratio"] = (
+        features["penup_time_total"] / features["F3_total_time"]
+        if features["F3_total_time"] > 0 else 0
+    )
+
+    features["penup_segment_count"] = len(penup_durations)
+    features["penup_mean_duration"] = np.mean(penup_durations) if len(penup_durations) else 0
+    features["penup_max_duration"] = np.max(penup_durations) if len(penup_durations) else 0
+    features["penup_std_duration"] = np.std(penup_durations) if len(penup_durations) else 0
+
+    features["stroke_pause_ratio"] = (
+    features["penup_segment_count"] / features["F4_stroke_count"]
+    if features["F4_stroke_count"] > 0 else 0
+    )
+
     return features      
     
     
