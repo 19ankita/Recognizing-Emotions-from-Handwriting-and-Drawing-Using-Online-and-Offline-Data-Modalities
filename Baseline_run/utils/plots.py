@@ -5,20 +5,21 @@ import seaborn as sns
 
 os.makedirs("figures", exist_ok=True)
 
-# -------------------------
-# 0. Paths
-# -------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-RESULTS_DIR = os.path.join(BASE_DIR, "results")
-FIGURES_DIR = os.path.join(BASE_DIR, "figures")
 
-os.makedirs(FIGURES_DIR, exist_ok=True)
+# Absolute path to Baseline_run directory
+BASELINE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..")
+)
 
-# -------------------------
-# 1. Load and Clean Data
-# -------------------------
+# Results directory inside Baseline_run
+RESULTS_DIR = os.path.join(BASELINE_DIR, "results")
+
 csv_path = os.path.join(RESULTS_DIR, "Model_summary.csv")
+
+print("Looking for CSV at:", csv_path)
+
 df = pd.read_csv(csv_path, sep=";")
+
 
 df.columns = df.columns.str.strip().str.lower()
 
