@@ -17,7 +17,7 @@ os.makedirs(FIGURES_DIR, exist_ok=True)
 # -------------------------
 # 1. Load and Clean Data
 # -------------------------
-csv_path = os.path.join(RESULTS_DIR, "model_summary_latest.csv")
+csv_path = os.path.join(RESULTS_DIR, "Model_summary.csv")
 df = pd.read_csv(csv_path, sep=";")
 
 df.columns = df.columns.str.strip().str.lower()
