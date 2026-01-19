@@ -6,7 +6,7 @@ def euclidean_dist(x1, y1, x2,  y2):
     return np.sqrt((x2 - x1)**2 + (y2 - y1)**2)
 
 def path_length(x, y):
-    return np.sum(np.sqrt(np.diff(x)**2) + np.diff(y)**2)
+    return np.sum(np.sqrt(np.diff(x)**2 + np.diff(y)**2))
 
 def instantaneous_speed(x, y, t):
     dt = np.diff(t)
@@ -18,6 +18,13 @@ def instantaneous_speed(x, y, t):
     vy = np.divide(dy[valid], dt[valid])
     
     return np.sqrt(vx**2 + vy**2)
+
+def acceleration(speeds, t):
+    dt = np.diff(t[1:])   
+    dv = np.diff(speeds)
+    valid = dt > 0
+    return dv[valid] / dt[valid]
+
 
 def straightness(x, y):
     chord = euclidean_dist(x[0], y[0], x[-1], y[-1])
@@ -68,9 +75,13 @@ def extract_features(df):
     # --- Kinematic ---
     speeds = instantaneous_speed(x, y, t)
     features["path_length"] = path_length(x, y)
-    features["median_speed"] = np.median(speeds) if len(speeds) else 0
-    features["p95_speed"] = np.percentile(speeds, 95) if len(speeds) else 0
-    features["stop_ratio"] = stop_ratio(speeds)  
+    acc = acceleration(speeds, t)
+    features["median_acceleration"] = np.median(acc) if len(acc) else 0
+
+    features["median_speed"] = np.median(speeds_down) if len(speeds_down) else 0
+    speeds_down = speeds[pen_down[1:]]
+    features["p95_speed"] = np.percentile(speeds_down, 95) if len(speeds_down) else 0
+    features["stop_ratio"] = stop_ratio(speeds_down)  
     
     
     # --- Geometric ---      
