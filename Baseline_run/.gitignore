@@ -11,8 +11,8 @@ env/
 .ipynb_checkpoints/
 
 # Large data files
-dataset/
-features/
+#dataset/
+#features/
 results/
 labels/*.xls
 
