@@ -13,7 +13,7 @@ env/
 # Large data files
 #dataset/
 #features/
-results/
+#results/
 labels/*.xls
 
 # OS files
