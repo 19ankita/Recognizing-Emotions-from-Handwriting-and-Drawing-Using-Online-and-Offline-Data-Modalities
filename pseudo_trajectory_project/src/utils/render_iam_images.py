@@ -32,8 +32,8 @@ def render_xml_to_image(xml_path, out_path):
 
 
 def main():
-    traj_dir = r"data\IAM_OnDB\trajectories"
-    img_dir  = r"data\IAM_OnDB\images"
+    traj_dir = r"data/IAM_OnDB/trajectories"
+    img_dir  = r"data/IAM_OnDB/images"
 
     os.makedirs(img_dir, exist_ok=True)
 
@@ -50,7 +50,7 @@ def main():
         if (i + 1) % 100 == 0:
             print(f"Rendered {i + 1}/{len(xml_files)}")
 
-    print("✅ Image rendering completed")
+    print("Image rendering completed")
 
 
 if __name__ == "__main__":
