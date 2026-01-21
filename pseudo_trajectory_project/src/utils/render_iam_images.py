@@ -7,30 +7,21 @@ def render_xml_to_image(xml_path, out_path):
     root = tree.getroot()
 
     plt.figure(figsize=(6, 3))
+    plotted = False
 
-    plotted = False  # track if anything is drawn
-
-    for trace in root.iter("trace"):
-        if trace.text is None:
-            continue
-
-        raw_points = trace.text.strip().replace("\n", " ").split(",")
-
+    # Iterate over all strokes
+    for stroke in root.iter("Stroke"):
         xs, ys = [], []
 
-        for pt in raw_points:
-            vals = pt.strip().split()
-            if len(vals) < 2:
-                continue
-
+        for point in stroke.iter("Point"):
             try:
-                x = float(vals[0])
-                y = float(vals[1])
-            except ValueError:
+                x = float(point.attrib["x"])
+                y = float(point.attrib["y"])
+            except KeyError:
                 continue
 
             xs.append(x)
-            ys.append(-y)  # invert Y for image coordinates
+            ys.append(-y)  # invert y-axis for image coordinates
 
         if len(xs) > 1:
             plt.plot(xs, ys, color="black", linewidth=2)
@@ -38,7 +29,7 @@ def render_xml_to_image(xml_path, out_path):
 
     if not plotted:
         plt.close()
-        return  # skip saving empty images
+        return
 
     plt.axis("off")
     plt.tight_layout(pad=0)
@@ -46,15 +37,13 @@ def render_xml_to_image(xml_path, out_path):
     plt.close()
 
 
-
 def main():
-    traj_dir = r"data/IAM_OnDB/trajectories"
-    img_dir  = r"data/IAM_OnDB/images"
+    traj_dir = "data/IAM_OnDB/trajectories"
+    img_dir  = "data/IAM_OnDB/images"
 
     os.makedirs(img_dir, exist_ok=True)
 
     xml_files = [f for f in os.listdir(traj_dir) if f.endswith(".xml")]
-
     print(f"Found {len(xml_files)} XML files")
 
     for i, fname in enumerate(xml_files):
