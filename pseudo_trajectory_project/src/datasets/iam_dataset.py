@@ -14,7 +14,7 @@ class IAMDataset(Dataset):
                  image_root="data/IAM_OnDB/images",
                  image_size=224
     ):
-        self.df = pd.read_csv(metadata_csv)
+        self.df = pd.read_csv(metadata_csv, sep=";")
         self.df.columns = self.df.columns.str.strip()
         self.image_root = image_root
 
