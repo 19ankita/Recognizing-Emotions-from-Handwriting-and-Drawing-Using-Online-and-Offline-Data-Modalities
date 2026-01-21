@@ -2,7 +2,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from src.utils.parse_xml import parse_whiteboard_xml, normalize_trajectory, resample_trajectory, render_xml_to_image
+from src.utils.parse_xml import parse_whiteboard_xml, normalize_trajectory, resample_trajectory
+from src.utils.render_iam_images import render_xml_to_image
 
 # ---------------------------
 # CONFIG
