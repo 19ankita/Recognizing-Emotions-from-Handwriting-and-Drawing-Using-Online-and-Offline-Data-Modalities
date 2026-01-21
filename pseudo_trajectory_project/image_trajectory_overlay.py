@@ -17,10 +17,10 @@ os.makedirs(OUT_DIR, exist_ok=True)
 dataset = IAMDataset(metadata_csv=METADATA)
 
 print("Columns:")
-print(list(dataset.columns))
+print(list(dataset.df.columns))
 
 print("\nFirst row:")
-print(dataset.iloc[0])
+print(dataset.df.iloc[0])
 
 img, traj = dataset[0]
 print("Image shape:", img.shape)
