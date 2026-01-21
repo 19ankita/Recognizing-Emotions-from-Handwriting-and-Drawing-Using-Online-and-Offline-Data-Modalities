@@ -19,8 +19,9 @@ def parse_whiteboard_xml(xml_path):
 def normalize_trajectory(traj):
     traj = traj.copy()
 
-    traj[:, 0] = (traj[:, 0] - traj[:, 0].min()) / (traj[:, 0].ptp() + 1e-8)
-    traj[:, 1] = (traj[:, 1] - traj[:, 1].min()) / (traj[:, 1].ptp() + 1e-8)
+    traj[:, 0] = (traj[:, 0] - traj[:, 0].min()) / (np.ptp(traj[:, 0]) + 1e-8)
+    traj[:, 1] = (traj[:, 1] - traj[:, 1].min()) / (np.ptp(traj[:, 1]) + 1e-8)
+
     traj[:, 2] = traj[:, 2] - traj[:, 2][0]
 
     return traj
