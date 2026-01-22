@@ -91,7 +91,6 @@ def extract_features(df):
     features["median_acceleration"] = np.median(acc) if len(acc) else 0
 
     features["median_speed"] = np.median(speeds_down) if len(speeds_down) else 0
-    speeds_down = speeds[pen_down[1:]]
     features["p95_speed"] = np.percentile(speeds_down, 95) if len(speeds_down) else 0
     features["stop_ratio"] = stop_ratio(speeds_down)  
     
