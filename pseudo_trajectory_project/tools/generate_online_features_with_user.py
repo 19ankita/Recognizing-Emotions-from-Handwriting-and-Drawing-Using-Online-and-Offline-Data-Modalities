@@ -213,7 +213,11 @@ def main():
             raise RuntimeError(
                 f"No .svc files found for task '{task_name}' in {dataset_dir}"
         )
-
+            
+    run_all_tasks(
+        task_dirs=TASK_DIRS,
+        out_dir="features"
+    )
 
 if __name__ == "__main__":
     main()
