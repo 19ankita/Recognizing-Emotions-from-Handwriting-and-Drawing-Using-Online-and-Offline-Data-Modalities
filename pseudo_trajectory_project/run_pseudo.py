@@ -6,7 +6,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 
 from src.utils.splits import train_test_split_ids
-from src.feature_extraction.pseudo_features import extract_pseudo_features
 from src.utils.feature_config import ONLINE_FEATURES
 
 
@@ -30,36 +29,19 @@ def run_task(task, target):
     print(f"[PSEUDO] Task: {task} | Target: {target}")
 
     traj_dir = os.path.join(PSEUDO_TRAJ_ROOT, task)
+    
+    # Load pseudo features
+    pseudo_df = pd.read_csv(
+        os.path.join(PSEUDO_TRAJ_ROOT, f"{task}_pseudo_features.csv")
+    )
 
     # Load labels from ONLINE CSV
     labels_df = pd.read_csv(
         os.path.join(ONLINE_FEATURE_ROOT, f"{task}_features.csv")
     )[["id", target]]
 
-    rows = []
-
-    # ---- Loop over .npy files ----
-    for fname in sorted(os.listdir(traj_dir)):
-        if not fname.endswith(".npy"):
-            continue
-
-        sample_id = fname.replace(".npy", "")
-        traj = np.load(os.path.join(traj_dir, fname))
-
-        if traj.ndim != 2 or traj.shape[1] < 2:
-            continue
-
-        feats = extract_pseudo_features(traj)
-        if feats is None:
-            continue
-
-        feats["id"] = sample_id
-        rows.append(feats)
-
-    feat_df = pd.DataFrame(rows)
-
     # Merge with emotion labels
-    df = feat_df.merge(labels_df, on="id", how="inner").dropna()
+    df = pseudo_df.merge(labels_df, on="id", how="inner").dropna()
 
     # Train / test split (same logic as online)
     train_ids, test_ids = train_test_split_ids(df["id"].unique())
