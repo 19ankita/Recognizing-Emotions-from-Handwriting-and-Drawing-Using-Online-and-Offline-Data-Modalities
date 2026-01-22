@@ -119,7 +119,12 @@ def extract_features(df):
 
     # -------- Kinematic --------
     speeds = instantaneous_speed(x, y, t)
-    speeds_down = speeds[pen_down[1:]] if len(speeds) else []
+    if len(speeds):
+        pen_down_pairs = pen_down[:-1] & pen_down[1:]
+        speeds_down = speeds[pen_down_pairs[:len(speeds)]]
+    else:
+        speeds_down = np.array([])
+
 
     features["path_length"] = path_length(x, y)
     acc = acceleration(speeds, t)
