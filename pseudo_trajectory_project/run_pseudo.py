@@ -6,7 +6,6 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 
 from src.utils.splits import train_test_split_ids
-from src.utils.feature_config import ONLINE_FEATURES
 
 
 # =========================
