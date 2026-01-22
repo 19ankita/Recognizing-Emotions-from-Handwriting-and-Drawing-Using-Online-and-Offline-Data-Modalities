@@ -37,8 +37,8 @@ def run_task(task, target):
 
     # Load labels from ONLINE CSV
     labels_df = pd.read_csv(
-        os.path.join(ONLINE_FEATURE_ROOT, f"{task}_features.csv")
-    )[["id", target]]
+        "labels/DASS_scores_clean.csv"
+    )[["user", target]]
 
     # Merge with emotion labels
     df = pseudo_df.merge(labels_df, on="id", how="inner").dropna()

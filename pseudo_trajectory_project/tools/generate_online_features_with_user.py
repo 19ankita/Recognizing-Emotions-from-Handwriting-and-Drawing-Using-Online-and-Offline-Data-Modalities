@@ -10,6 +10,7 @@ from scipy.spatial import ConvexHull
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 dataset_dir  = os.path.join(base_dir, "dataset")
+labels_dir   = os.path.join(base_dir, "labels")
 
 # ===========================================================
 
