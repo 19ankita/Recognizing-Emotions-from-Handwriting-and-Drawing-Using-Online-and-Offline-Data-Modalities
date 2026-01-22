@@ -47,7 +47,7 @@ def prepare_labels():
     input_path = os.path.join(labels_dir, "DASS_scores_clean.csv")
     output_path = os.path.join(labels_dir, "DASS_scores_global.csv")
 
-    labels = pd.read_csv(input_path)
+    labels = pd.read_csv(input_path, sep=";")
     print("LABEL COLUMNS:", labels.columns.tolist())
     
     # Split collections
