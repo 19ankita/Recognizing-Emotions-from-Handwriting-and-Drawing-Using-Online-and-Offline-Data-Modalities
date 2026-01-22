@@ -26,40 +26,49 @@ results_dir  = os.path.join(base_dir, "results")
 # ===========================================================
 
 
-def extract_user_number(x):
-    """Extract user number from feature id (e.g. u00025s00001_hw00003 → 25)."""
-    match = re.search(r"u(\d+)", x)
-    return int(match.group(1)) if match else None
+def extract_global_user(id_str):
+    match = re.search(r"([uv])(\d+)", id_str)
+    if not match:
+        return None
+    
+    prefix, user = match.group(1), int(match.group(2))
+    
+    if prefix == "u":        # Collection 1
+        return user
+    elif prefix == "v":      # Collection 2
+        return user + 45
+
 
 def prepare_labels():
     """Clean the DASS Excel file and save to labels/DASS_scores_clean.csv"""
 
     os.makedirs(labels_dir, exist_ok=True)
     
-    output_file = os.path.join(labels_dir, "DASS_scores_clean.csv")
+    input_path = os.path.join(labels_dir, "DASS_scores_clean.csv")
+    output_path = os.path.join(labels_dir, "DASS_scores_global.csv")
+
+    labels = pd.read_csv(input_path)
     
-    if os.path.exists(output_file):
-        print("Using the existing cleaned DASS labels..")
-        return pd.read_csv(output_file)
+    # Split collections
+    labels_c1 = labels.iloc[:45].copy()     # users 1–45
+    labels_c2 = labels.iloc[45:].copy()     # users 1–84 again
     
-    print("Preparing DASS labels...")
+    # Offset Collection 2 users
+    labels_c2["user"] = labels_c2["user"] + 45
     
-    dass = pd.read_excel(os.path.join(base_dir, "DASS_scores.xls"),engine="xlrd")
-    
-    # Keep relevant columns
-    dass_clean = dass.loc[:, ["File Number user", "depression", "anxiety", "stress"]].copy()
-    dass_clean.rename(columns={"File Number user": "user"}, inplace=True)
+    # Combine
+    labels_global = pd.concat([labels_c1, labels_c2], ignore_index=True)
     
     # Add total score
-    dass_clean.loc[:,"total"] = (
-    dass_clean["depression"] + dass_clean["anxiety"] + dass_clean["stress"]
+    labels_global.loc[:,"total"] = (
+    labels_global["depression"] + labels_global["anxiety"] + labels_global["stress"]
 )
+       
+    labels_global.to_csv(output_path, index=False)
+
+    print(f"Cleaned DASS labels saved to {labels_global}")
     
-    # Save clean labels
-    dass_clean.to_csv(output_file, index=False)
-    print(f"Cleaned DASS labels saved to {output_file}")
-    
-    return dass_clean
+    return labels_global
 
 
 def main():
@@ -162,7 +171,9 @@ def main():
         features = pd.read_csv(output_csv)
         features["user"] = features["id"].apply(extract_user_number)
         
-        merged = features.merge(labels, on="user")
+        labels = pd.read_csv("labels/DASS_scores_global.csv")
+        
+        merged = features.merge(labels, on="user", how="inner")
         merged.to_csv(merged_csv, index=False)
         
         print(f"Features merged with DASS scores saved to {merged_csv}")
