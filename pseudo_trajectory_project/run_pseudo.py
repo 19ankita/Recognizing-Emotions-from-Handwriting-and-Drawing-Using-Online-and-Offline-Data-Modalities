@@ -6,6 +6,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error
 
 from src.utils.splits import train_test_split_ids
+from src.utils.feature_config import ONLINE_FEATURES
 
 
 # =========================
@@ -14,9 +15,9 @@ from src.utils.splits import train_test_split_ids
 TASKS = ["cdt", "cursive_writing", "house", "pentagon", "words"]
 TARGETS = ["stress", "anxiety", "depression"]
 
-PSEUDO_TRAJ_ROOT = "pseudo_trajectory_experiments/data/pseudo_trajectories"
-ONLINE_FEATURE_ROOT = "pseudo_trajectory_experiments/data/online_features"
-OUT_ROOT = "pseudo_trajectory_experiments/results/pseudo"
+PSEUDO_TRAJ_ROOT = "data/EMOTHAW/pseudo_trajectories"
+ONLINE_FEATURE_ROOT = "data/EMOTHAW/online_features"
+OUT_ROOT = "results/pseudo"
 
 os.makedirs(OUT_ROOT, exist_ok=True)
 
