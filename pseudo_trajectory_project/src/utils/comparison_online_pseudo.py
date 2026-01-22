@@ -8,7 +8,7 @@ import pandas as pd
 TASKS = ["cdt", "cursive_writing", "house", "pentagon", "words"]
 
 ONLINE_ROOT = "data/EMOTHAW/online_features"
-PSEUDO_ROOT = "data/EMOTHAW/pseudo_features"
+PSEUDO_ROOT = "data/EMOTHAW/pseudo_trajectories"
 
 OUT_CSV = "data/EMOTHAW/online_pseudo_summary.csv"
 
