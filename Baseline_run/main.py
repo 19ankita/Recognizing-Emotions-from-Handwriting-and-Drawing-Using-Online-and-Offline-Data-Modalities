@@ -48,6 +48,7 @@ def prepare_labels():
     output_path = os.path.join(labels_dir, "DASS_scores_global.csv")
 
     labels = pd.read_csv(input_path)
+    print("LABEL COLUMNS:", labels.columns.tolist())
     
     # Split collections
     labels_c1 = labels.iloc[:45].copy()     # users 1–45
@@ -169,7 +170,7 @@ def main():
         
         # --- Merge with DASS labels ---
         features = pd.read_csv(output_csv)
-        features["user"] = features["id"].apply(extract_user_number)
+        features["user"] = features["id"].apply(extract_global_user)
         
         labels = pd.read_csv("labels/DASS_scores_global.csv")
         
