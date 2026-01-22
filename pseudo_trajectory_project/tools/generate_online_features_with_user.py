@@ -71,12 +71,13 @@ def instantaneous_speed(x, y, t):
 
 
 def acceleration(speeds, t):
+    """
+    Compute acceleration from consecutive speed samples.
+    Acceleration is defined as delta(speed) per step.
+    """
     if len(speeds) < 2:
         return np.array([])
-    dt = np.diff(t[1:])
-    dv = np.diff(speeds)
-    valid = dt > 0
-    return dv[valid] / dt[valid]
+    return np.diff(speeds)
 
 
 def straightness(x, y):
@@ -127,7 +128,7 @@ def extract_features(df):
 
 
     features["path_length"] = path_length(x, y)
-    acc = acceleration(speeds, t)
+    acc = acceleration(speeds)
     features["median_acceleration"] = np.median(acc) if len(acc) else 0
     features["median_speed"] = np.median(speeds_down) if len(speeds_down) else 0
     features["p95_speed"] = np.percentile(speeds_down, 95) if len(speeds_down) else 0
