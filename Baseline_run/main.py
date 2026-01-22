@@ -172,8 +172,6 @@ def main():
         features = pd.read_csv(output_csv)
         features["user"] = features["id"].apply(extract_global_user)
         
-        labels = pd.read_csv("labels/DASS_scores_global.csv")
-        
         merged = features.merge(labels, on="user", how="inner")
         merged.to_csv(merged_csv, index=False)
         
