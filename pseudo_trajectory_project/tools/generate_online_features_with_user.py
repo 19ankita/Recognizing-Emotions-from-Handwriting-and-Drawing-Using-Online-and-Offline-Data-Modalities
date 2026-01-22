@@ -6,6 +6,13 @@ import pandas as pd
 from scipy.spatial import ConvexHull
 
 
+# ===================== PATH SETUP  =====================
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
+dataset_dir  = os.path.join(base_dir, "dataset")
+
+# ===========================================================
+
 TASK_DIRS = {
     "cdt": "dataset/cdt",
     "house": "dataset/house",
@@ -199,10 +206,14 @@ def run_all_tasks(task_dirs, out_dir):
 
 def main():
     
-    run_all_tasks(
-        task_dirs=TASK_DIRS,
-        out_dir="features"
-    )
+    for task_name, dataset_dir in TASK_DIRS.items():
+        data = read_all_svc_files(dataset_dir)
+
+        if len(data) == 0:
+            raise RuntimeError(
+                f"No .svc files found for task '{task_name}' in {dataset_dir}"
+        )
+
 
 if __name__ == "__main__":
     main()
