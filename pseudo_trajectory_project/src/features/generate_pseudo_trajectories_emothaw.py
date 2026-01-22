@@ -74,3 +74,6 @@ for task in TASKS:
         np.save(out_path, traj_pred)
 
 print("Pseudo-trajectories generated for all EMOTHAW tasks")
+
+
+
