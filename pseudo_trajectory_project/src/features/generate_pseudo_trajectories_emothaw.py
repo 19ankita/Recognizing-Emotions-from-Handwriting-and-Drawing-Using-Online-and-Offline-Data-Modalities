@@ -11,7 +11,7 @@ from src.models.reverse_model import ReverseModel
 # ---------------------------
 EMOTHAW_ROOT = "data/EMOTHAW"
 OUT_ROOT = "data/EMOTHAW/pseudo_trajectories"
-MODEL_PATH = "reverse_model.pth"
+MODEL_PATH = "checkpoint/reverse_model.pth"
 
 TASKS = [
     "cdt",
