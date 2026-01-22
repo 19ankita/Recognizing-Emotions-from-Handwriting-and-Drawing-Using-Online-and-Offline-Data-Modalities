@@ -70,7 +70,7 @@ def instantaneous_speed(x, y, t):
     return np.sqrt((dx[valid] / dt[valid]) ** 2 + (dy[valid] / dt[valid]) ** 2)
 
 
-def acceleration(speeds, t):
+def acceleration(speeds):
     """
     Compute acceleration from consecutive speed samples.
     Acceleration is defined as delta(speed) per step.
