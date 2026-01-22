@@ -19,42 +19,70 @@ def extract_pseudo_features(traj):
     """
     traj: np.ndarray of shape (T, D), D >= 2
     """
-    x, y = traj[:, 0], traj[:, 1]
-    
+    x = traj[:, 0]
+    y = traj[:, 1]
+
     if len(x) < 2:
         return None
 
-    # Differences
+    # ----------------------------------
+    # Step-wise differences
+    # ----------------------------------
     dx = np.diff(x)
     dy = np.diff(y)
     step_dist = np.sqrt(dx**2 + dy**2)
 
-    # Path length
+    # ----------------------------------
+    # Path-based features
+    # ----------------------------------
     path_length = step_dist.sum()
 
-    # Speed statistics (assuming uniform dt)
-    mean_speed = step_dist.mean()
-    std_speed  = step_dist.std()
-
-    # Straightness
     displacement = np.sqrt((x[-1] - x[0])**2 + (y[-1] - y[0])**2)
     straightness = displacement / (path_length + 1e-8)
 
-    # Direction angles
+    # ----------------------------------
+    # Directional features
+    # ----------------------------------
     angles = np.arctan2(dy, dx)
-    direction_variance = np.var(angles) if len(angles) > 0 else 0.0
 
-    # Bounding box
-    bbox_area = (x.max() - x.min()) * (y.max() - y.min())
+    # Circular mean (dominant direction)
+    dominant_angle = np.arctan2(
+        np.mean(np.sin(angles)),
+        np.mean(np.cos(angles))
+    )
+
+    # Circular variance → concentration
+    R = np.sqrt(
+        np.mean(np.cos(angles))**2 +
+        np.mean(np.sin(angles))**2
+    )
+    direction_concentration = R  # in [0, 1]
+
+    # ----------------------------------
+    # Spatial layout features
+    # ----------------------------------
+    width = x.max() - x.min()
+    height = y.max() - y.min()
+    aspect_ratio = width / (height + 1e-8)
+
+    # ----------------------------------
+    # Speed statistics (proxy)
+    # ----------------------------------
+    median_speed = np.median(step_dist)
+    p95_speed = np.percentile(step_dist, 95)
 
     return {
         "path_length": path_length,
-        "mean_speed": mean_speed,
-        "std_speed": std_speed,
         "straightness": straightness,
-        "direction_variance": direction_variance,
-        "bbox_area": bbox_area,
+        "dominant_angle": dominant_angle,
+        "direction_concentration": direction_concentration,
+        "width": width,
+        "height": height,
+        "aspect_ratio": aspect_ratio,
+        "median_speed": median_speed,
+        "p95_speed": p95_speed,
     }
+
 
 
 # =========================
@@ -97,7 +125,7 @@ def main():
         df = pd.DataFrame(rows)
         df.to_csv(out_csv, index=False)
 
-        print(f"  Saved → {out_csv}")
+        print(f"  Saved to {out_csv}")
 
 
 if __name__ == "__main__":
