@@ -138,9 +138,10 @@ def main():
         
     # Tree models (NO scaling / PCA)
     models.extend([
-        ("Random Forest", RandomForestRegressor(random_state=42)),
-        ("Gradient Boosting", GradientBoostingRegressor(random_state=42))
+        (RandomForestRegressor(random_state=42), "Random Forest"),
+        (GradientBoostingRegressor(random_state=42), "Gradient Boosting")
     ])
+
     
     for task in tasks:
         input_dir = os.path.join(dataset_dir, task)

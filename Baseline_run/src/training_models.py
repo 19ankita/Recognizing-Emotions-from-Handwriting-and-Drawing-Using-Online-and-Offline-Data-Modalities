@@ -27,8 +27,8 @@ def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5
             
         elif "Elastic Net" in model_name:
             param_grid = {
-                "model__alpha": np.logspace(-4, 1, 15),
-                "model__l1_ratio": [0.2, 0.5, 0.8]
+                "model__alpha": np.logspace(-2, 2, 15),
+                "model__l1_ratio": [0.3, 0.5, 0.7]
             }
             
         elif "Random Forest" in model_name:
