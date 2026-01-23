@@ -49,7 +49,8 @@ def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5
             }
             search_type = "random"
         
-        if param_grid and hasattr(model, "estimator"):
+        
+        if param_grid and isinstance(model, MultiOutputRegressor):
             param_grid = {f"estimator__{k}": v for k,v in param_grid.items()}
             
         if param_grid:
