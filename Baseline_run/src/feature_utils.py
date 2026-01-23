@@ -133,6 +133,46 @@ def extract_features(df):
         area = 0
     features["ink_density"] = features["path_length"] / area if area > 0 else 0  
     
+    # --- Slant features ---
+    if len(dx) > 0:
+        slants = np.degrees(np.arctan2(dy, dx))
+        slants = slants[pen_down[:-1]]  # only pen-down segments
+        
+        features["mean_slant"] = np.mean(slants) if len(slants) else 0
+        features["std_slant"] = np.std(slants) if len(slants) else 0
+        features["abs_mean_slant"] = np.mean(np.abs(slants)) if len(slants) else 0
+    else:
+        features["mean_slant"] = 0
+        features["std_slant"] = 0
+        features["abs_mean_slant"] = 0
+        
+        # --- Pen-up features ---
+    pen_up_pairs = pen_up[:-1] & pen_up[1:]
+
+    # Pen-up path length
+    if np.any(pen_up_pairs):
+        pu_dx = dx[pen_up_pairs]
+        pu_dy = dy[pen_up_pairs]
+        features["pen_up_path_length"] = np.sum(np.sqrt(pu_dx**2 + pu_dy**2))
+    else:
+        features["pen_up_path_length"] = 0
+
+    # Pen-up speeds
+    if len(speeds):
+        speeds_up = speeds[pen_up_pairs[:len(speeds)]]
+        features["median_pen_up_speed"] = np.median(speeds_up) if len(speeds_up) else 0
+        features["p95_pen_up_speed"] = np.percentile(speeds_up, 95) if len(speeds_up) else 0
+    else:
+        features["median_pen_up_speed"] = 0
+        features["p95_pen_up_speed"] = 0
+
+    # Pen-up ratio
+    total_path = features["path_length"]
+    features["pen_up_ratio"] = (
+        features["pen_up_path_length"] / total_path if total_path > 0 else 0
+    )
+
+    
     return features      
     
     

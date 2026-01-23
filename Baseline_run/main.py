@@ -91,7 +91,7 @@ def main():
     # Select tasks
     if args.all_tasks:
         tasks = [t for t in os.listdir(dataset_dir) if os.path.isdir(os.path.join(dataset_dir, t))]
-        print(f"\nDetected tasks automatically: {tasks}")
+        print(f"\n Detected tasks automatically: {tasks}")
     else:
         tasks = args.tasks
         if not tasks:
@@ -105,33 +105,42 @@ def main():
     os.makedirs(features_dir, exist_ok=True)
     results = []
     
-    # Define models
-    linear_models = [
-        ("Linear Regression", LinearRegression()),
-        ("Ridge Regression", Ridge(alpha=1.0)),
-        ("Lasso Regression", Lasso(alpha=0.1)),
-        ("Elastic Net", ElasticNet(alpha=0.1, l1_ratio=0.5))
-    ]
+    # ===================== MODELS =====================
 
-    ensemble_models = [
-        ("Random Forest", RandomForestRegressor(n_estimators=100, random_state=42)),
-        ("Gradient Boosting", GradientBoostingRegressor(n_estimators=100, random_state=42))
-    ]
-    
-    # Apply scaling + PCA ONLY to linear models
     models = []
 
-    for name, base_model in linear_models:
-        pipeline = Pipeline([
-            ("scaler", StandardScaler()),
-            ("pca", PCA(n_components=0.95)),  # keep 95% variance
-            ("model", base_model)
-        ])
-        models.append((pipeline, name))
-
-    # Ensemble models WITHOUT scaling/PCA
-    for name, model in ensemble_models:
-        models.append((model, name))
+    # Linear + Ridge WITH PCA
+    for name, base_model in [
+        ("Linear Regression", LinearRegression()),
+        ("Ridge Regression", Ridge())
+    ]:
+        models.append((
+            Pipeline([
+                ("scaler", StandardScaler()),
+                ("pca", PCA(n_components=0.95)),
+                ("model", base_model)
+            ]),
+            name
+        ))
+        
+    # Lasso / ElasticNet WITHOUT PCA
+    for name, base_model in [
+        ("Lasso Regression", Lasso()),
+        ("Elastic Net", ElasticNet())
+    ]:
+        models.append((
+            Pipeline([
+                ("scaler", StandardScaler()),
+                ("model", base_model)
+            ]),
+            name
+        ))
+        
+    # Tree models (NO scaling / PCA)
+    models.extend([
+        ("Random Forest", RandomForestRegressor(random_state=42)),
+        ("Gradient Boosting", GradientBoostingRegressor(random_state=42))
+    ])
     
     for task in tasks:
         input_dir = os.path.join(dataset_dir, task)
@@ -155,14 +164,9 @@ def main():
             df = pd.DataFrame(arr, columns=columns)
             df["id"] = id
             dfs.append(df)
-        full_df = pd.concat(dfs, ignore_index=True)
-        
-        print("Shape of DataFrame:", full_df.shape)
-        print("Columns:", full_df.columns.tolist())
-        print("Sample rows:\n", full_df.head(5))      
+        full_df = pd.concat(dfs, ignore_index=True)   
             
         # Feature engineering
-        print("Extracting features..")
         run_feature_extraction(
             full_df,
             output_csv 
@@ -175,27 +179,25 @@ def main():
         merged = features.merge(labels, on="user", how="inner")
         merged.to_csv(merged_csv, index=False)
         
-        print(f"Features merged with DASS scores saved to {merged_csv}")
-        
         # Run single-output models
         for model, model_name in models:
             if mode in ["total", "all"]:
                 # 1. Single-output (TOTAL DASS)
-                results.append(run_model(merged_csv, task, model, model_name, target="total",
+                results.append(run_model(merged_csv, task, model, mode, model_name, target="total",
                                          do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds,
                                          do_shap=args.shap
                                          ))
             
-            if mode in ["subscales", "all"]:
+            if mode in ["multi", "all"]:
                 # 2. Multi-output (Depression, Anxiety, Stress simultaneously)
-                results.extend(run_multioutput_model(merged_csv, task, model, model_name,
+                results.extend(run_multioutput_model(merged_csv, task, model, mode, model_name,
                                do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds,
                                do_shap=args.shap
                                ))
 
-            if mode in ["multi", "all"]:
+            if mode in ["subscales", "all"]:
                 # 3. Separate models for each subscale
-                results.extend(run_separate_subscale_models(merged_csv, task, model, model_name,
+                results.extend(run_separate_subscale_models(merged_csv, task, model, mode, model_name,
                                                             do_cv=args.cv, do_search=args.search, cv_folds=args.cv_folds,
                                                             do_shap=args.shap))
                    

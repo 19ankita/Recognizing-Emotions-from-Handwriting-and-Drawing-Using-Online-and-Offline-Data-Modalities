@@ -20,36 +20,64 @@ def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5
         search_type = "grid"
         
         if "Ridge" in model_name:
-            param_grid = {"model__alpha": [0.1, 1.0, 10.0, 50.0]}
+            param_grid = {"model__alpha": np.logspace(-3, 3, 20)}
+            
         elif "Lasso" in model_name:
-            param_grid = {"model__alpha": [0.01, 0.1, 1.0, 10.0]}
+            param_grid = {"model__alpha": np.logspace(-4, 1, 20)}
+            
         elif "Elastic Net" in model_name:
-            param_grid = {"model__alpha": [0.01, 0.1, 1.0], "model__l1_ratio": [0.2, 0.5, 0.8]}
+            param_grid = {
+                "model__alpha": np.logspace(-4, 1, 15),
+                "model__l1_ratio": [0.2, 0.5, 0.8]
+            }
+            
         elif "Random Forest" in model_name:
-            param_grid = {"n_estimators": [100, 200, 500], "max_depth": [None, 10, 20]}
+            param_grid = {
+                "n_estimators": [50, 100, 200],
+                "max_depth": [None, 5, 10],
+                "min_samples_leaf": [1, 3, 5]
+            }
             search_type = "random"
+            
         elif "Gradient Boosting" in model_name:
             param_grid = {
-                "n_estimators": [100, 200, 500],
+                "n_estimators": [50, 100, 200],
                 "learning_rate": [0.01, 0.05, 0.1],
-                "max_depth": [3, 5, 7]
+                "max_depth": [2, 3, 4],
+                "subsample": [0.7, 0.9, 1.0],
+                "min_samples_leaf": [1, 3, 5]
             }
             search_type = "random"
         
-        if isinstance(model, MultiOutputRegressor) and param_grid:
+        if param_grid and hasattr(model, "estimator"):
             param_grid = {f"estimator__{k}": v for k,v in param_grid.items()}
             
         if param_grid:
             if search_type == "grid":
-                search = GridSearchCV(model, param_grid, cv=cv, 
-                                      scoring="neg_mean_squared_error", n_jobs=-1)
+                search = GridSearchCV(model,
+                                      param_grid, 
+                                      cv=cv, 
+                                      scoring="neg_mean_squared_error", 
+                                      n_jobs=-1)
             else:
-                search = RandomizedSearchCV(model, param_grid, cv=cv, scoring="neg_mean_squared_error", 
-                                            n_jobs=-1, n_iter=20, random_state=42)   
+                search = RandomizedSearchCV(model, 
+                                            param_grid, 
+                                            cv=cv,
+                                            scoring="neg_mean_squared_error", 
+                                            n_jobs=-1,
+                                            n_iter=15, 
+                                            random_state=42)   
                 
             search.fit(X, y)
             best_model = search.best_estimator_
+            
+            cv_mse = -search.best_score_
+            cv_std = np.std(search.cv_results_["mean_test_score"])
+            
             print(f"Best params for {model_name}: {search.best_params_}")
+            print(f"CV MSE: {cv_mse:.3f}")
+
+            return best_model, cv_mse, cv_std
         
     # Cross-validation evaluation
     if do_cv:
@@ -62,7 +90,7 @@ def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5
     return best_model, cv_mse, cv_std
 
 
-def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=False, do_search=False, cv_folds=5, do_shap=False):
+def run_model(merged_csv, task_name, model, mode, model_name, target="total", do_cv=False, do_search=False, cv_folds=5, do_shap=False):
     """
     Train any regression model on TOTAL DASS score and return metrics.
 
@@ -80,19 +108,17 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
     # Keep only numeric features
     X = X.select_dtypes(include=[np.number])
     
-    leak_cols = {"depression", "anxiety", "stress", "total"}
-    assert leak_cols.isdisjoint(X.columns), f"Leakage: {leak_cols & set(X.columns)}"
-    
     if target == "total":
         y = df["total"] # single output = total DASS score
     else:
         raise ValueError("Invalid target for run_model. Use run_multioutput_model for multiple targets.")        
-    
-    # CV + hyperparameter tuning
-    best_model, cv_mse, cv_std = evaluate_with_cv(model, X, y, model_name, do_cv, do_search, cv_folds)
 
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # CV + hyperparameter tuning
+    best_model, cv_mse, cv_std = evaluate_with_cv(model, X_train, y_train, model_name, do_cv, do_search, cv_folds)
+    
     best_model.fit(X_train, y_train)
     y_pred = best_model.predict(X_test)
 
@@ -109,12 +135,13 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
     results = {
         "Task": task_name,
         "Model": model_name,
+        "mode": mode, 
         "Target": "TOTAL DASS",
         "MSE": float(mse),
         "RMSE": float(rmse),
         "R2": float(r2),
-        "CV_MSE": float(cv_mse),
-        "CV_STD": float(cv_std)
+        "CV_MSE": float(cv_mse) if cv_mse is not None else None,
+        "CV_STD": float(cv_std) if cv_std is not None else None
     }
     
     # Run SHAP after evaluation
@@ -124,7 +151,7 @@ def run_model(merged_csv, task_name, model, model_name, target="total", do_cv=Fa
     return results
 
 
-def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False, do_search=False, cv_folds=5, do_shap=False):
+def run_multioutput_model(merged_csv, task_name, model, mode, model_name, do_cv=False, do_search=False, cv_folds=5, do_shap=False):
     """
     Train regression model (multi-output) on Depression, Anxiety, Stress simultaneously.
     """
@@ -134,19 +161,17 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
     # Keep only numeric features
     X = X.select_dtypes(include=[np.number])
     
-    leak_cols = {"depression", "anxiety", "stress", "total"}
-    assert leak_cols.isdisjoint(X.columns), f"Leakage: {leak_cols & set(X.columns)}"
-    
     y = df[["depression", "stress", "anxiety"]]
     
     # Wrap model in MultiOutputRegressor
     multi_model = MultiOutputRegressor(model)
     
-    # CV + hyperparam tuning
-    best_model, cv_mse, cv_std = evaluate_with_cv(multi_model, X, y, model_name, do_cv, do_search, cv_folds)
-    
     # Train/test split
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # CV + hyperparam tuning
+    best_model, cv_mse, cv_std = evaluate_with_cv(multi_model, X_train, y_train, model_name, do_cv, do_search, cv_folds)
+    
     best_model.fit(X_train, y_train)
     y_pred = best_model.predict(X_test)
     
@@ -170,12 +195,13 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
         results.append({
             "Task": task_name,
             "Model": model_name,
+            "mode": mode, 
             "Target": col.capitalize(),
             "MSE": float(mse),
             "RMSE": float(rmse),
             "R2": float(r2),
-            "CV_MSE": float(cv_mse),
-            "CV_STD": float(cv_std)
+            "CV_MSE": float(cv_mse) if cv_mse is not None else None,
+            "CV_STD": float(cv_std) if cv_std is not None else None
         })
         
         
@@ -183,7 +209,7 @@ def run_multioutput_model(merged_csv, task_name, model, model_name, do_cv=False,
     return results    
 
 
-def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv=False, do_search=False, cv_folds=5, do_shap=False):
+def run_separate_subscale_models(merged_csv, task_name, model, mode, model_name, do_cv=False, do_search=False, cv_folds=5, do_shap=False):
     """
     Run 3 separate regressions:
         - One for Depression
@@ -195,9 +221,6 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
     X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")
     # Keep only numeric features
     X = X.select_dtypes(include=[np.number])
-    
-    leak_cols = {"depression", "anxiety", "stress", "total"}
-    assert leak_cols.isdisjoint(X.columns), f"Leakage: {leak_cols & set(X.columns)}"
 
     results = []
     for target in ["depression", "anxiety", "stress"]:
@@ -205,14 +228,14 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
             print(f"Column {target} not found in {merged_csv}, skipping...")
             continue
         y = df[target]
-        
-        # CV + hyperparam tuning
-        best_model, cv_mse, cv_std = evaluate_with_cv(model, X, y, model_name, do_cv, do_search, cv_folds)
             
         # Train/test split
         X_train, X_test, y_train, y_test = train_test_split(
                 X, y, test_size=0.2, random_state=42
             )             
+        
+        # CV + hyperparam tuning
+        best_model, cv_mse, cv_std = evaluate_with_cv(model, X_train, y_train, model_name, do_cv, do_search, cv_folds)
         
         # Fit model
         best_model.fit(X_train, y_train)
@@ -235,12 +258,13 @@ def run_separate_subscale_models(merged_csv, task_name, model, model_name, do_cv
         results.append({
             "Task": task_name,
             "Model": model_name,
+            "mode": mode, 
             "Target": target.capitalize(),
             "MSE": float(mse),
             "RMSE": float(rmse),
             "R2": float(r2),
-            "CV_MSE": float(cv_mse),
-            "CV_STD": float(cv_std)
+            "CV_MSE": float(cv_mse) if cv_mse is not None else None,
+            "CV_STD": float(cv_std) if cv_std is not None else None
         })
 
     return results 
