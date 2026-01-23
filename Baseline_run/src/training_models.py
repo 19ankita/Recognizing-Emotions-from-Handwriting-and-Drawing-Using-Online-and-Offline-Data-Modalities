@@ -136,7 +136,7 @@ def run_model(merged_csv, task_name, model, mode, model_name, target="total", do
     results = {
         "Task": task_name,
         "Model": model_name,
-        "mode": mode, 
+        "mode": "total", 
         "Target": "TOTAL DASS",
         "MSE": float(mse),
         "RMSE": float(rmse),
@@ -196,7 +196,7 @@ def run_multioutput_model(merged_csv, task_name, model, mode, model_name, do_cv=
         results.append({
             "Task": task_name,
             "Model": model_name,
-            "mode": mode, 
+            "mode": "multi-output", 
             "Target": col.capitalize(),
             "MSE": float(mse),
             "RMSE": float(rmse),
@@ -259,7 +259,7 @@ def run_separate_subscale_models(merged_csv, task_name, model, mode, model_name,
         results.append({
             "Task": task_name,
             "Model": model_name,
-            "mode": mode, 
+            "mode": "subscales", 
             "Target": target.capitalize(),
             "MSE": float(mse),
             "RMSE": float(rmse),
