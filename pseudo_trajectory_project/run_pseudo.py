@@ -45,14 +45,10 @@ def run_task(task, target):
     # Load pseudo features
     # -------------------------
     pseudo_path = os.path.join(PSEUDO_TRAJ_ROOT, f"{task}_pseudo_features.csv")
-    pseudo_df = pd.read_csv(pseudo_path, sep=";")
+    pseudo_df = pd.read_csv(pseudo_path, sep=None, engine="python")
     
     online_path = os.path.join(ONLINE_FEATURE_ROOT, f"{task}_with_dass.csv")
-    online_df = pd.read_csv(online_path , sep=";")
-    
-    # Normalize ID strings 
-    pseudo_df["id"] = pseudo_df["id"].astype(str).str.strip()
-    online_df["id"] = online_df["id"].astype(str).str.strip()
+    online_df = pd.read_csv(online_path , sep=None, engine="python")
 
     df = (
         pseudo_df.merge(
