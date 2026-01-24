@@ -49,6 +49,10 @@ def run_task(task, target):
     
     online_path = os.path.join(ONLINE_FEATURE_ROOT, f"{task}_with_dass.csv")
     online_df = pd.read_csv(online_path , sep=";")
+    
+    # Normalize ID strings 
+    pseudo_df["id"] = pseudo_df["id"].astype(str).str.strip()
+    online_df["id"] = online_df["id"].astype(str).str.strip()
 
     df = (
         pseudo_df.merge(
@@ -58,6 +62,13 @@ def run_task(task, target):
         )
         .dropna()
     )
+    
+    # Save merged pseudo features with labels (per task)
+    merged_out = os.path.join(
+        OUT_ROOT, f"{task}_pseudo_with_dass.csv"
+    )
+    df.to_csv(merged_out, index=False, sep=";")
+    print(f"[PSEUDO] Saved merged file to {merged_out}")
     
     # -------------------------
     # Fix numeric formatting in features
