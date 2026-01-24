@@ -1,7 +1,8 @@
 import os
 import matplotlib.pyplot as plt
 
-os.makedirs("figures", exist_ok=True)
+save_dir = "figures/plots"
+os.makedirs(save_dir, exist_ok=True)
 
 # Training loss values
 epochs = list(range(1, 21))
