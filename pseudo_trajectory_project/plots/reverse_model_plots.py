@@ -23,8 +23,10 @@ plt.grid(True)
 
 plt.tight_layout()
 
-# Save files
-plt.savefig("reverse_model_training_loss.pdf", bbox_inches="tight")
-plt.savefig("reverse_model_training_loss.png", dpi=300, bbox_inches="tight")
+pdf_path = os.path.join(save_dir, "reverse_model_training_loss.pdf")
+png_path = os.path.join(save_dir, "reverse_model_training_loss.png")
 
-plt.show()
+plt.savefig(pdf_path, bbox_inches="tight")
+plt.savefig(png_path, dpi=300, bbox_inches="tight")
+plt.close()
+
