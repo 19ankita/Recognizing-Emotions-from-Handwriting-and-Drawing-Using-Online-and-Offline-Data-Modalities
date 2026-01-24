@@ -5,7 +5,6 @@ import seaborn as sns
 
 os.makedirs("figures", exist_ok=True)
 
-
 # Absolute path to Baseline_run directory
 BASELINE_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..")
@@ -14,12 +13,9 @@ BASELINE_DIR = os.path.abspath(
 # Results directory inside Baseline_run
 RESULTS_DIR = os.path.join(BASELINE_DIR, "results")
 
-csv_path = os.path.join(RESULTS_DIR, "Model_summary.csv")
-
-print("Looking for CSV at:", csv_path)
+csv_path = os.path.join(RESULTS_DIR, "model_summary.csv")
 
 df = pd.read_csv(csv_path, sep=";")
-
 
 df.columns = df.columns.str.strip().str.lower()
 
@@ -31,11 +27,18 @@ df["cv_std"] = df["cv_std"].fillna(0)
 
 # Keep only subscales (exclude TOTAL DASS)
 df = df[df["target"].str.lower().isin(["depression", "anxiety", "stress"])]
+df = df[df["mode"].isin(["multi-output", "subscales"])]
+
+df["experimental_mode"] = df["mode"].map({
+    "multi-output": "Joint / Aggregated",
+    "subscales": "Subscale-Specific"
+})
 
 # -------------------------
 # 2. Define Experimental Mode
 # -------------------------
 df = df.sort_values(by=["task", "model", "target"]).reset_index(drop=True)
+df = df[df["mode"].isin(["multi-output", "subscales"])]
 
 df["experimental_mode"] = (
     df.groupby(["task", "model", "target"]).cumcount()
@@ -53,7 +56,7 @@ plot_df = (
 # -------------------------
 # 4. Bar Plot
 # -------------------------
-sns.set(style="whitegrid", palette="Set2")
+sns.set_theme(style="whitegrid", palette="Set2")
 
 plt.figure(figsize=(9, 6))
 sns.barplot(
