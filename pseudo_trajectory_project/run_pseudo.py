@@ -32,8 +32,8 @@ def run_task(task, target):
     # -------------------------
     # Load pseudo features
     # -------------------------
-    pseudo_path = os.path.join(PSEUDO_TRAJ_ROOT, f"{task}_pseudo_features.csv", sep=";")
-    pseudo_df = pd.read_csv(pseudo_path)
+    pseudo_path = os.path.join(PSEUDO_TRAJ_ROOT, f"{task}_pseudo_features.csv")
+    pseudo_df = pd.read_csv(pseudo_path, sep=";")
     
     online_df = pd.read_csv(
         os.path.join(ONLINE_FEATURE_ROOT, f"{task}_with_dass.csv", sep=";")
