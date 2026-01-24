@@ -13,7 +13,7 @@ from src.utils.feature_config import ONLINE_FEATURES
 # CONFIG
 # =========================
 TASKS = ["cdt", "cursive_writing", "house", "pentagon", "words"]
-TARGETS = ["stress", "anxiety", "depression"]
+TARGETS = ["stress", "anxiety", "depression", "total"]
 
 PSEUDO_TRAJ_ROOT = "data/EMOTHAW/pseudo_trajectories"
 ONLINE_FEATURE_ROOT = "data/EMOTHAW/online_features"
