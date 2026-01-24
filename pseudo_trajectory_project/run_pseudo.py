@@ -35,15 +35,8 @@ def run_task(task, target):
     pseudo_path = os.path.join(PSEUDO_TRAJ_ROOT, f"{task}_pseudo_features.csv")
     pseudo_df = pd.read_csv(pseudo_path, sep=";")
     
-    online_df = pd.read_csv(
-        os.path.join(ONLINE_FEATURE_ROOT, f"{task}_with_dass.csv", sep=";")
-    )
-
-    # Load labels from ONLINE CSV
-    labels_df = pd.read_csv(
-        "labels/DASS_scores_clean.csv"
-    )[["user", target]]
-
+    online_path = os.path.join(ONLINE_FEATURE_ROOT, f"{task}_with_dass.csv")
+    online_df = pd.read_csv(online_path , sep=";")
 
     df = (
         pseudo_df.merge(
