@@ -35,13 +35,9 @@ def run_task(task, target):
     pseudo_path = os.path.join(PSEUDO_TRAJ_ROOT, f"{task}_pseudo_features.csv")
     pseudo_df = pd.read_csv(pseudo_path)
     
-    # -------------------------
-    # Load ID → user mapping from online features
-    # -------------------------
-    online_map_path = os.path.join(
-        ONLINE_FEATURE_ROOT, f"{task}_with_dass.csv"
+    online_df = pd.read_csv(
+        os.path.join(ONLINE_FEATURE_ROOT, f"{task}_with_dass.csv")
     )
-    id_user_df = pd.read_csv(online_map_path, usecols=["user", "id"])
 
     # Load labels from ONLINE CSV
     labels_df = pd.read_csv(
@@ -49,16 +45,15 @@ def run_task(task, target):
     )[["user", target]]
 
 
-    # -------------------------
-    # Merge: id → user → label
-    # -------------------------
     df = (
-        pseudo_df
-        .merge(id_user_df, on="user", how="inner")
-        .merge(labels_df, on="user", how="inner")
+        pseudo_df.merge(
+            online_df[["id", "user", "depression", "anxiety", "stress", "total"]],
+            on="id",
+            how="inner"
+        )
         .dropna()
     )
-
+    
     # Train / test split (same logic as online)
     train_ids, test_ids = train_test_split_ids(df["id"].unique())
 
