@@ -17,8 +17,9 @@ TARGETS = ["stress", "anxiety", "depression"]
 
 PSEUDO_TRAJ_ROOT = "data/EMOTHAW/pseudo_trajectories"
 ONLINE_FEATURE_ROOT = "data/EMOTHAW/online_features"
-OUT_ROOT = "results/pseudo"
+LABEL_PATH = "labels/DASS_scores_clean.csv"
 
+OUT_ROOT = "results/pseudo"
 os.makedirs(OUT_ROOT, exist_ok=True)
 
 
@@ -27,13 +28,12 @@ os.makedirs(OUT_ROOT, exist_ok=True)
 # =========================
 def run_task(task, target):
     print(f"[PSEUDO] Task: {task} | Target: {target}")
-
-    traj_dir = os.path.join(PSEUDO_TRAJ_ROOT, task)
     
+    # -------------------------
     # Load pseudo features
-    pseudo_df = pd.read_csv(
-        os.path.join(PSEUDO_TRAJ_ROOT, f"{task}_pseudo_features.csv")
-    )
+    # -------------------------
+    pseudo_path = os.path.join(PSEUDO_TRAJ_ROOT, f"{task}_pseudo_features.csv")
+    pseudo_df = pd.read_csv(pseudo_path)
 
     # Load labels from ONLINE CSV
     labels_df = pd.read_csv(
@@ -41,7 +41,7 @@ def run_task(task, target):
     )[["user", target]]
 
     # Merge with emotion labels
-    df = pseudo_df.merge(labels_df, on="id", how="inner").dropna()
+    df = pseudo_df.merge(labels_df, on="sample_id", how="inner").dropna()
 
     # Train / test split (same logic as online)
     train_ids, test_ids = train_test_split_ids(df["id"].unique())
@@ -84,7 +84,7 @@ def main():
     out_path = os.path.join(OUT_ROOT, "pseudo_all_targets_results.csv")
     pd.DataFrame(results).to_csv(out_path, index=False)
 
-    print(f"\n Saved PSEUDO results for all targets → {out_path}")
+    print(f"\n Saved PSEUDO results for all targets to {out_path}")
 
 
 if __name__ == "__main__":
