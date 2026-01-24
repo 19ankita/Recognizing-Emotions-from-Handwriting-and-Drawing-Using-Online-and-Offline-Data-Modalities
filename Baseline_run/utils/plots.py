@@ -5,74 +5,56 @@ import seaborn as sns
 
 os.makedirs("figures", exist_ok=True)
 
-# Absolute path to Baseline_run directory
 BASELINE_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..")
 )
-
-# Results directory inside Baseline_run
 RESULTS_DIR = os.path.join(BASELINE_DIR, "results")
-
 csv_path = os.path.join(RESULTS_DIR, "model_summary.csv")
 
 df = pd.read_csv(csv_path, sep=";")
-
 df.columns = df.columns.str.strip().str.lower()
 
 for col in ["r2", "cv_mse", "cv_std"]:
     df[col] = pd.to_numeric(df[col], errors="coerce")
 
 df = df.dropna(subset=["r2"])
-df["cv_std"] = df["cv_std"].fillna(0)
 
-# Keep only subscales (exclude TOTAL DASS)
-df = df[df["target"].str.lower().isin(["depression", "anxiety", "stress"])]
-df = df[df["mode"].isin(["multi-output", "subscales"])]
+df = df[
+    (df["target"].isin(["depression", "anxiety", "stress"])) &
+    (df["mode"].isin(["multi-output", "subscales"]))
+]
 
 df["experimental_mode"] = df["mode"].map({
     "multi-output": "Joint / Aggregated",
     "subscales": "Subscale-Specific"
 })
 
-# -------------------------
-# 2. Define Experimental Mode
-# -------------------------
-df = df.sort_values(by=["task", "model", "target"]).reset_index(drop=True)
-df = df[df["mode"].isin(["multi-output", "subscales"])]
-
-df["experimental_mode"] = (
-    df.groupby(["task", "model", "target"]).cumcount()
-    .map({0: "Joint / Aggregated", 1: "Subscale-Specific"})
-)
-
-# -------------------------
-# 3. Aggregate (mean across tasks if needed)
-# -------------------------
+# Aggregate across MODELS only
 plot_df = (
-    df.groupby(["target", "experimental_mode"], as_index=False)
-    .agg(mean_r2=("r2", "mean"))
+    df.groupby(["task", "target", "experimental_mode"], as_index=False)
+      .agg(mean_r2=("r2", "mean"))
 )
 
-# -------------------------
-# 4. Bar Plot
-# -------------------------
-sns.set_theme(style="whitegrid", palette="Set2")
+sns.set(style="whitegrid", palette="Set2")
 
-plt.figure(figsize=(9, 6))
-sns.barplot(
+g = sns.catplot(
     data=plot_df,
-    x="target",
+    x="task",
     y="mean_r2",
     hue="experimental_mode",
+    col="target",
+    kind="bar",
+    height=5,
+    aspect=1.1,
     errorbar=None
 )
 
-plt.axhline(0, color="black", linewidth=1, linestyle="--")
-plt.xlabel("DASS Subscale")
-plt.ylabel("R² Score")
-plt.title("Comparison of Joint vs Subscale-Specific Modeling (R²)")
-plt.legend(title="Experimental Mode")
-plt.tight_layout()
+g.set_axis_labels("Task", "Mean R²")
+g.set_titles("{col_name}")
+for ax in g.axes.flatten():
+    ax.axhline(0, color="black", linestyle="--", linewidth=1)
+    ax.tick_params(axis='x', rotation=30)
 
-plt.savefig("figures/barplot_r2_experimental_modes.pdf", dpi=300)
+plt.tight_layout()
+plt.savefig("figures/r2_joint_vs_subscale_per_task.pdf", dpi=300)
 plt.close()
