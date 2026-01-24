@@ -41,7 +41,7 @@ def run_task(task, target):
     )[["user", target]]
 
     # Merge with emotion labels
-    df = pseudo_df.merge(labels_df, on="sample_id", how="inner").dropna()
+    df = pseudo_df.merge(labels_df, on="user", how="inner").dropna()
 
     # Train / test split (same logic as online)
     train_ids, test_ids = train_test_split_ids(df["id"].unique())
