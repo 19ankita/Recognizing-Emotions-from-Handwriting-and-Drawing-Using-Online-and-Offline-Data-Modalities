@@ -41,7 +41,7 @@ def run_task(task, target):
     online_map_path = os.path.join(
         ONLINE_FEATURE_ROOT, f"{task}_with_dass.csv"
     )
-    id_user_df = pd.read_csv(online_map_path, usecols=["id", "user"])
+    id_user_df = pd.read_csv(online_map_path, usecols=["user", "id"])
 
     # Load labels from ONLINE CSV
     labels_df = pd.read_csv(
