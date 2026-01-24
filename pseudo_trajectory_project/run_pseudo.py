@@ -22,6 +22,18 @@ LABEL_PATH = "labels/DASS_scores_clean.csv"
 OUT_ROOT = "results/pseudo"
 os.makedirs(OUT_ROOT, exist_ok=True)
 
+PSEUDO_NUMERIC_FEATURES = [
+    "path_length",
+    "straightness",
+    "dominant_angle",
+    "direction_concentration",
+    "width",
+    "height",
+    "aspect_ratio",
+    "median_speed",
+    "p95_speed",
+]
+
 
 # =========================
 # RUN ONE TASK FOR ONE LABEL
@@ -47,16 +59,33 @@ def run_task(task, target):
         .dropna()
     )
     
+    # -------------------------
+    # Fix numeric formatting in features
+    # -------------------------
+
+    for col in PSEUDO_NUMERIC_FEATURES:
+        if col in df.columns:
+            df[col] = (
+                df[col]
+                .astype(str)
+                .str.replace(".", "", regex=False)   # remove thousand separators
+                .str.replace(",", ".", regex=False)  # handle decimal commas
+            )
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Drop rows with invalid numeric values
+    df = df.dropna(subset=PSEUDO_NUMERIC_FEATURES)
+
     # Train / test split (same logic as online)
     train_ids, test_ids = train_test_split_ids(df["id"].unique())
 
     train_df = df[df["id"].isin(train_ids)]
     test_df  = df[df["id"].isin(test_ids)]
 
-    X_train = train_df[ONLINE_FEATURES].values
+    X_train = train_df[PSEUDO_NUMERIC_FEATURES].values
     y_train = train_df[target].values
 
-    X_test  = test_df[ONLINE_FEATURES].values
+    X_test  = test_df[PSEUDO_NUMERIC_FEATURES].values
     y_test  = test_df[target].values
 
     model = LinearRegression()
