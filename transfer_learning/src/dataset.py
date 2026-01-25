@@ -15,6 +15,11 @@ def load_reverse_features(csv_path, id_col="id"):
     # ------------------------------------------------------------
     df = pd.read_csv(csv_path)
     
+    df.columns = df.columns.str.strip()
+    
+    if id_col not in df.columns:
+        raise ValueError(f"Column '{id_col}' not found. Available columns: {df.columns.tolist()}")
+    
     features = {}
     for _, row in df.iterrows():
         image_id = str(row[id_col])
