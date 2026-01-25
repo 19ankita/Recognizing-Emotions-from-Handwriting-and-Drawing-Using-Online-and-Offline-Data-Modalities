@@ -9,6 +9,18 @@ import pandas as pd
 
 from src.pseudo_features import extract_pseudo_dynamic_features
 
+PSEUDO_NUMERIC_FEATURES = [
+    "path_length",
+    "straightness",
+    "dominant_angle",
+    "direction_concentration",
+    "width",
+    "height",
+    "aspect_ratio",
+    "median_speed",
+    "p95_speed",
+]
+
 def load_reverse_features(csv_path, id_col="id"):
     # ------------------------------------------------------------
     # Pseudo features reconstructed from the reverse model
@@ -21,22 +33,21 @@ def load_reverse_features(csv_path, id_col="id"):
         raise ValueError(f"Column '{id_col}' not found. Available columns: {df.columns.tolist()}")
     
    # Convert ALL feature columns to numeric safely
-    feature_cols = [c for c in df.columns if c != id_col]
+    for col in PSEUDO_NUMERIC_FEATURES:
+        if col in df.columns:
+            df[col] = df[col].astype(str)
 
-    for c in feature_cols:
-        df[c] = (
-            df[c]
-            .astype(str)
-            .str.replace(".", "", regex=False)   # remove thousands separator
-            .str.replace(",", ".", regex=False) # if comma is decimal
-        )
-        df[c] = pd.to_numeric(df[c], errors="raise")
+            df[col] = df[col].str.replace(",", "", regex=False)
+            df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # Drop rows with invalid numeric values
+    df = df.dropna(subset=PSEUDO_NUMERIC_FEATURES)
 
     features = {}
     for _, row in df.iterrows():
         image_id = str(row[id_col])
         feat = torch.tensor(
-            row.drop(id_col).values,
+            row[PSEUDO_NUMERIC_FEATURES].values,
             dtype=torch.float32
         )
         features[image_id] = feat
@@ -114,7 +125,7 @@ class AlbumentationsDataset(ImageFolder):
         
         if self.pseudo_type == "handcrafted":
             pseudo = extract_pseudo_dynamic_features(image)
-            pseudo = torch.from_numpy(pseudo)
+            pseudo = torch.from_numpy(pseudo).float()
 
         elif self.pseudo_type == "reverse":
             # Extract ID from EMOTHAW image filename
