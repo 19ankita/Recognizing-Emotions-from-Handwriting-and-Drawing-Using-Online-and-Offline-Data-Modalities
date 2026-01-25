@@ -46,10 +46,9 @@ def load_reverse_features(csv_path, id_col="id"):
     features = {}
     for _, row in df.iterrows():
         image_id = str(row[id_col])
-        feat = torch.tensor(
-            row[PSEUDO_NUMERIC_FEATURES].values,
-            dtype=torch.float32
-        )
+        values = row[PSEUDO_NUMERIC_FEATURES].values.astype("float32")
+        feat = torch.from_numpy(values)
+
         features[image_id] = feat
 
     return features
