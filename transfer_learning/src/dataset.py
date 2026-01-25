@@ -115,6 +115,15 @@ class AlbumentationsDataset(ImageFolder):
                 reverse_feat_path,
                 id_col="id"  
             )
+            
+            print("Example image IDs:")
+            for i in range(3):
+                print(os.path.splitext(os.path.basename(self.samples[i][0]))[0])
+
+            print("\nExample reverse feature IDs:")
+            for k in list(self.reverse_features.keys())[:3]:
+                print(k)
+
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]
