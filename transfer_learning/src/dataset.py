@@ -13,7 +13,7 @@ def load_reverse_features(csv_path, id_col="id"):
     # ------------------------------------------------------------
     # Pseudo features reconstructed from the reverse model
     # ------------------------------------------------------------
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(csv_path, sep=None, engine="python")
     
     df.columns = df.columns.str.strip()
     
