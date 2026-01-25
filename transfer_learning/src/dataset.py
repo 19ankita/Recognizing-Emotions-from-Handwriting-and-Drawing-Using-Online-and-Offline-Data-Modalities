@@ -100,9 +100,13 @@ class AlbumentationsDataset(ImageFolder):
             pseudo = torch.from_numpy(pseudo)
 
         elif self.pseudo_type == "reverse":
-            id = os.path.basename(path)
-            pseudo = self.reverse_features[id]
-            pseudo = pseudo.float()
+            # Extract ID from EMOTHAW image filename
+            image_id = os.path.splitext(os.path.basename(path))[0]
+
+            if image_id not in self.reverse_features:
+                raise KeyError(f"Reverse features not found for {image_id}")
+
+            pseudo = self.reverse_features[image_id].float()
             
         else:
             raise ValueError("Unknown pseudo_type")
