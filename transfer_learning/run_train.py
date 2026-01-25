@@ -41,6 +41,12 @@ def get_scheduler(optimizer, warmup_epochs, total_epochs):
 # Training Function
 # ------------------------------------------------------------
 def run_train(args):
+    
+    if args.task == "all" and args.pseudo_type == "reverse":
+        raise ValueError(
+            "pseudo_type='reverse' is not supported with task='all' "
+            "(reverse features are task-specific)"
+        )
 
     # Prepare output directory
     os.makedirs("outputs", exist_ok=True)
@@ -48,6 +54,10 @@ def run_train(args):
     # Select device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device → {device}")
+    
+    reverse_feat_path = None
+    if args.pseudo_type == "reverse":
+        reverse_feat_path = f"pseudo_features/{args.task}_pseudo_features.csv"
 
     # --------------------------------------------------------
     # Load dataset(s)
@@ -58,7 +68,9 @@ def run_train(args):
         img_size=args.img_size,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        val_ratio=args.val_ratio
+        val_ratio=args.val_ratio,
+        pseudo_type=args.pseudo_type,
+        reverse_feat_path=reverse_feat_path
     )
     
     class_names = get_class_names_from_task(args.task_dir, args.task)
@@ -121,7 +133,6 @@ def run_train(args):
             optimizer.zero_grad()
 
             with torch.amp.autocast("cuda"):
-                pseudo = pseudo.to(device)  # float tensor
                 outputs = model(images, pseudo)
                 loss = criterion(outputs, labels)
 
@@ -206,10 +217,12 @@ def run_train(args):
 
     sample_img_path = next(img_dir.glob("*.png"))
 
-    visualize_single_image(
-        image_path=sample_img_path,
-        save_dir=pseudo_vis_dir
-    )
+    if args.pseudo_type == "handcrafted":
+        visualize_single_image(
+            image_path=sample_img_path,
+            save_dir=pseudo_vis_dir
+        )
+
 
     print("Pseudo-dynamic feature visualization saved.")
 
@@ -263,6 +276,9 @@ if __name__ == "__main__":
     
     parser.add_argument("--num_workers", type=int, default=2,
                         help="Number of workers for DataLoader.")
+    
+    parser.add_argument("--pseudo_type", type=str, default="handcrafted", choices=["handcrafted", "reverse"],
+                        help="Type of pseudo features to use")
 
     args = parser.parse_args()
 

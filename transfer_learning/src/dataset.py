@@ -5,8 +5,26 @@ from torch.utils.data import DataLoader, random_split, ConcatDataset, Dataset
 from torchvision.datasets import ImageFolder
 import torch
 import os
+import pandas as pd
 
 from src.pseudo_features import extract_pseudo_dynamic_features
+
+def load_reverse_features(csv_path, id_col="id"):
+    # ------------------------------------------------------------
+    # Pseudo features reconstructed from the reverse model
+    # ------------------------------------------------------------
+    df = pd.read_csv(csv_path)
+    
+    features = {}
+    for _, row in df.iterrows():
+        image_id = str(row[id_col])
+        feat = torch.tensor(
+            row.drop(id_col).values,
+            dtype=torch.float32
+        )
+        features[image_id] = feat
+
+    return features
 
 
 # ------------------------------------------------------------
@@ -57,8 +75,19 @@ def get_transforms(img_size):
 # ------------------------------------------------------------
 class AlbumentationsDataset(ImageFolder):
 
-    def __init__(self, root):
+    def __init__(self, root, pseudo_type="handcrafted", reverse_feat_path=None):
         super().__init__(root)
+        
+        self.pseudo_type = pseudo_type
+        
+        if self.pseudo_type == "reverse":
+            if reverse_feat_path is None:
+                raise ValueError("reverse_feat_path must be provided for reverse features")
+
+            self.reverse_features = load_reverse_features(
+                reverse_feat_path,
+                id_col="id"  
+            )
 
     def __getitem__(self, idx):
         path, label = self.samples[idx]
@@ -66,8 +95,17 @@ class AlbumentationsDataset(ImageFolder):
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
-        # extract pseudo dynamic features BEFORE augmentation
-        pseudo = extract_pseudo_dynamic_features(image)
+        if self.pseudo_type == "handcrafted":
+            pseudo = extract_pseudo_dynamic_features(image)
+            pseudo = torch.from_numpy(pseudo)
+
+        elif self.pseudo_type == "reverse":
+            id = os.path.basename(path)
+            pseudo = self.reverse_features[id]
+            pseudo = pseudo.float()
+            
+        else:
+            raise ValueError("Unknown pseudo_type")
 
         return image, pseudo, label
 
@@ -90,7 +128,14 @@ class TransformSubset(Dataset):
     
     
     
-def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_ratio):
+def get_dataloaders(task, 
+                    task_root, 
+                    img_size, 
+                    batch_size, 
+                    num_workers, 
+                    val_ratio,
+                    pseudo_type="handcrafted",
+                    reverse_feat_path=None):
 
     train_tf, val_tf = get_transforms(img_size)
 
@@ -100,7 +145,9 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     if task != "all":
         task_root = os.path.join(task_root, task)
         print(f"Loading single task: {task_root}")
-        dataset = AlbumentationsDataset(task_root)
+        dataset = AlbumentationsDataset(task_root,
+                                        pseudo_type=pseudo_type,
+                                        reverse_feat_path=reverse_feat_path)
 
     # ------------------------------
     # CASE 2: ALL TASKS COMBINED
@@ -116,7 +163,9 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
         for sub in subfolders:
             path = os.path.join(task_root, sub)
             print(" :", path)
-            datasets.append(AlbumentationsDataset(path))
+            datasets.append(AlbumentationsDataset(path,
+                                                 pseudo_type=pseudo_type,
+                                                 reverse_feat_path=reverse_feat_path))
 
         dataset = ConcatDataset(datasets)
         
