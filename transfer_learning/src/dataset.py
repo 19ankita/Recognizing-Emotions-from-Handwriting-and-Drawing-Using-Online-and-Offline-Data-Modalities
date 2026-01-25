@@ -20,6 +20,18 @@ def load_reverse_features(csv_path, id_col="id"):
     if id_col not in df.columns:
         raise ValueError(f"Column '{id_col}' not found. Available columns: {df.columns.tolist()}")
     
+   # Convert ALL feature columns to numeric safely
+    feature_cols = [c for c in df.columns if c != id_col]
+
+    for c in feature_cols:
+        df[c] = (
+            df[c]
+            .astype(str)
+            .str.replace(".", "", regex=False)   # remove thousands separator
+            .str.replace(",", ".", regex=False) # if comma is decimal
+        )
+        df[c] = pd.to_numeric(df[c], errors="raise")
+
     features = {}
     for _, row in df.iterrows():
         image_id = str(row[id_col])
