@@ -95,7 +95,12 @@ class AlbumentationsDataset(Dataset):
                 continue
             
             for fname in os.listdir(class_path):
-                if fname.endswith(".png"):
+                if not fname.endswith(".png"):
+                    continue
+                
+                image_id = os.path.splitext(fname)[0]
+                
+                if image_id in self.label_map:
                     self.samples.append(os.path.join(class_path, fname))
                     
     def __len__(self):
@@ -112,9 +117,6 @@ class AlbumentationsDataset(Dataset):
         
         # image_id from filename
         image_id = os.path.splitext(os.path.basename(path))[0]
-        
-        if image_id not in self.label_map:
-            raise KeyError(f"Missing DASS label for image_id: {image_id}")
         
         label = self.label_map[image_id]
 
