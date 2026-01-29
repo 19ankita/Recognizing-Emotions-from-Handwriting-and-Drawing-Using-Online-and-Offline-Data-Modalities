@@ -6,14 +6,12 @@ from tqdm import tqdm
 import json
 import os
 import math
-from pathlib import Path
 
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
 from src.utils import save_checkpoint
 from utils.plot_all import run_all_plots
 from utils.plot_training import plot_metrics
-from utils.visualize_aug import visualize_augmentations
 
 
 torch.backends.cudnn.benchmark = True
