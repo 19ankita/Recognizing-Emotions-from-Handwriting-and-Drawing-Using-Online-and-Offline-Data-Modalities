@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import argparse
 import numpy as np
@@ -8,11 +9,18 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
 
+PROJECT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..")
+)
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+    
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
 
 import inspect
 print(inspect.getfile(get_dataloaders))
+
 
 DASS_LABELS = ["Depression", "Anxiety", "Stress", "Total"]
 
