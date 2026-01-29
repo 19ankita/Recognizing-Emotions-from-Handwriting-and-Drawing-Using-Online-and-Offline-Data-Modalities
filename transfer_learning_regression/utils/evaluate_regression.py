@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
 
-from src.dataset import get_dataloaders
-from src.model import build_resnet18
+from ..src.dataset import get_dataloaders
+from ..src.model import build_resnet18
 
 import inspect
 print(inspect.getfile(get_dataloaders))
