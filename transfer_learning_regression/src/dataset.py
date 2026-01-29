@@ -2,11 +2,34 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import cv2
 from torch.utils.data import DataLoader, random_split, ConcatDataset, Dataset
-from torchvision.datasets import ImageFolder
 import torch
 import os
+import pandas as pd
 
 from src.pseudo_features import extract_pseudo_dynamic_features
+
+# ===================== PATH SETUP  =====================
+base_dir = os.path.dirname(os.path.abspath(__file__))
+features_dir = os.path.join(base_dir, "features")
+
+# ------------------------------------------------------------
+# Labels for regression
+# ------------------------------------------------------------
+def load_dass_labels(csv_path):
+    df = pd.read_csv(csv_path)
+
+    label_map = {}
+    for _, row in df.iterrows():
+        label_map[row["id"]] = torch.tensor(
+            [
+                row["depression"],
+                row["anxiety"],
+                row["stress"],
+                row["total"]
+            ],
+            dtype=torch.float32
+        )
+    return label_map
 
 
 # ------------------------------------------------------------
@@ -53,21 +76,47 @@ def get_transforms(img_size):
 
 
 # ------------------------------------------------------------
-# Albumentations wrapper for ImageFolder
+# Albumentations wrapper for Dataset
 # ------------------------------------------------------------
-class AlbumentationsDataset(ImageFolder):
-
-    def __init__(self, root):
-        super().__init__(root)
+class AlbumentationsDataset(Dataset):
+    """
+    Returns:
+        image  : numpy array (H, W, 3)
+        pseudo : tensor [5]
+        label  : tensor [4] → (dep, anx, stress, total)
+    """
+    def __init__(self, root, label_map):
+        self.label_map = label_map
+        self.samples = []
+        
+        for class_dir in os.listdir(root):
+            class_path = os.path.join(root, class_dir)
+            if not os.path.isdir(class_path):
+                continue
+            
+            for fname in os.listdir(class_path):
+                if fname.endswith(".png"):
+                    self.samples.append(os.path.join(class_path, fname))
+                    
+    def __len__(self):
+        return len(self.samples)
 
     def __getitem__(self, idx):
-        path, label = self.samples[idx]
+        path = self.samples[idx]
 
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
         # extract pseudo dynamic features BEFORE augmentation
         pseudo = extract_pseudo_dynamic_features(image)
+        
+        # image_id from filename
+        image_id = os.path.splitext(os.path.basename(path))[0]
+        
+        if image_id not in self.label_map:
+            raise KeyError(f"Missing DASS label for image_id: {image_id}")
+        
+        label = self.label_map[image_id]
 
         return image, pseudo, label
 
@@ -90,9 +139,10 @@ class TransformSubset(Dataset):
     
     
     
-def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_ratio):
+def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_ratio, label_csv):
 
     train_tf, val_tf = get_transforms(img_size)
+    label_map = load_dass_labels(label_csv)
 
     # ------------------------------
     # CASE 1: SINGLE TASK
@@ -113,6 +163,11 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
         ])
 
         datasets = []
+        subfolders = sorted([
+            f for f in os.listdir(task_root)
+            if os.path.isdir(os.path.join(task_root, f))
+        ])
+        
         for sub in subfolders:
             path = os.path.join(task_root, sub)
             print(" :", path)
@@ -143,15 +198,15 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     # --------------------------------------------------------
     # DATALOADERS
     # --------------------------------------------------------
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,  num_workers=num_workers)
-    val_loader   = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    train_loader = DataLoader(train_ds, 
+                              batch_size=batch_size,
+                              shuffle=True,  
+                              num_workers=num_workers)
     
-    # --------------------------------------------------------
-    # CLASS COUNT
-    # --------------------------------------------------------
-    if isinstance(dataset, ConcatDataset):
-        num_classes = len(dataset.datasets[0].classes)
-    else:
-        num_classes = len(dataset.classes)
+    val_loader   = DataLoader(val_ds, 
+                              batch_size=batch_size, 
+                              shuffle=False, 
+                              num_workers=num_workers)
 
-    return train_loader, val_loader, num_classes
+
+    return train_loader, val_loader, None

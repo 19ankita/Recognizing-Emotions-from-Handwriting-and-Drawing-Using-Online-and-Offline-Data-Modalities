@@ -11,12 +11,9 @@ from pathlib import Path
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
 from src.utils import save_checkpoint
-from utils.helper import get_class_names_from_task
 from utils.plot_all import run_all_plots
 from utils.plot_training import plot_metrics
 from utils.visualize_aug import visualize_augmentations
-from src.pseudo_features import extract_pseudo_dynamic_features
-from utils.visualize_pseudodynamic_features import visualize_single_image
 
 
 torch.backends.cudnn.benchmark = True
@@ -58,7 +55,8 @@ def run_train(args):
         img_size=args.img_size,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
-        val_ratio=args.val_ratio
+        val_ratio=args.val_ratio,
+        label_csv=args.label_csv
     )
 
     model = build_resnet18(output_dim=4, freeze_backbone=args.freeze_backbone)
@@ -109,7 +107,7 @@ def run_train(args):
             labels = labels.to(device).float() 
             optimizer.zero_grad()
 
-            with torch.amp.autocast("cuda"):
+            with torch.amp.autocast(device_type="cuda", enabled=torch.cuda.is_available()):
                 outputs = model(images, pseudo)
                 loss = criterion(outputs, labels)
 
@@ -160,7 +158,7 @@ def run_train(args):
         # --------------------------------------------------------
         # Save best model
         # --------------------------------------------------------
-        if val_loss > best_val_loss:
+        if val_loss < best_val_loss:
             best_val_loss = val_loss
             
             filename = f"best_model_{args.task}_regression.pth"
@@ -181,7 +179,7 @@ def run_train(args):
         task=args.task,
         task_dir=args.task_dir,
         model_path=os.path.join(
-            "outputs", f"best_model_{args.task}_{args.model}.pth"
+            "outputs", f"best_model_{args.task}_regression.pth"
         ),
         history_path="outputs/history.json",
         output_dir="outputs"
@@ -204,6 +202,9 @@ if __name__ == "__main__":
     
     parser.add_argument("--task_dir", type=str, required=True,
                         help="Path to your dataset root folder containing class subdirectories.")
+    
+    parser.add_argument("--label_csv", type=str, required=True,
+                    help="Path to CSV file with DASS labels")
 
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--lr", type=float, default=1e-3)
