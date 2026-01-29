@@ -44,7 +44,7 @@ def run_train(args):
 
     # Select device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device → {device}")
+    print(f"Using device: {device}")
 
     # --------------------------------------------------------
     # Load dataset(s)
@@ -187,10 +187,6 @@ def run_train(args):
     
     plot_metrics("outputs/history.json")
     
-    visualize_augmentations(args.task, args.task_dir, args.img_size)
-    
-    print("\nRunning stress diagnostics...")
-
 # ------------------------------------------------------------
 # CLI
 # ------------------------------------------------------------
