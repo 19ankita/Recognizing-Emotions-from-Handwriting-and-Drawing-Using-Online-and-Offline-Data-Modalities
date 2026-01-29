@@ -9,7 +9,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from scipy.stats import pearsonr
 
 from src.dataset import get_dataloaders
-from src.model import build_resnet18_regressor
+from src.model import build_resnet18
 
 
 DASS_LABELS = ["Depression", "Anxiety", "Stress", "Total"]
@@ -115,7 +115,7 @@ def main(args):
     )
 
     # Load model
-    model = build_resnet18_regressor(
+    model = build_resnet18(
         output_dim=4,
         freeze_backbone=False
     )
