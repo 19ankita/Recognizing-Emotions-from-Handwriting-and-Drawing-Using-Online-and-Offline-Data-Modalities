@@ -18,12 +18,7 @@ if PROJECT_ROOT not in sys.path:
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
 
-import inspect
-print(inspect.getfile(get_dataloaders))
-
-
 DASS_LABELS = ["Depression", "Anxiety", "Stress", "Total"]
-
 
 # ------------------------------------------------------------
 # COLLECT PREDICTIONS
@@ -57,10 +52,10 @@ def compute_metrics(y_true, y_pred):
         r, p = pearsonr(y_true[:, i], y_pred[:, i])
 
         results[name] = {
-            "RMSE": rmse,
-            "MAE": mae,
-            "Pearson_r": r,
-            "Pearson_p": p
+            "RMSE": float(rmse),
+            "MAE": float(mae),
+            "Pearson_r": float(r),
+            "Pearson_p": float(p)
         }
 
     return results
