@@ -150,7 +150,7 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     if task != "all":
         task_root = os.path.join(task_root, task)
         print(f"Loading single task: {task_root}")
-        dataset = AlbumentationsDataset(task_root)
+        dataset = AlbumentationsDataset(task_root, label_map)
 
     # ------------------------------
     # CASE 2: ALL TASKS COMBINED
@@ -171,7 +171,7 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
         for sub in subfolders:
             path = os.path.join(task_root, sub)
             print(" :", path)
-            datasets.append(AlbumentationsDataset(path))
+            datasets.append(AlbumentationsDataset(path, label_map))
 
         dataset = ConcatDataset(datasets)
         
