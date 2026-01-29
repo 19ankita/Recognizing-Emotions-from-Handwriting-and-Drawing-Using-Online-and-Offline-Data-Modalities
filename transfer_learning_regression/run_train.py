@@ -10,11 +10,14 @@ import math
 from src.dataset import get_dataloaders
 from src.model import build_resnet18
 from src.utils import save_checkpoint
-from utils.plot_all import run_all_plots
-from utils.plot_training import plot_metrics
+import numpy as np
+from sklearn.metrics import mean_squared_error, r2_score
+from utils.plot_training_csv import plot_training_from_csv
+import csv
 
 
 torch.backends.cudnn.benchmark = True
+DASS_NAMES = ["Depression", "Anxiety", "Stress", "Total"]
 
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
@@ -79,14 +82,29 @@ def run_train(args):
 
     # Mixed precision scaler
     scaler = torch.amp.GradScaler(enabled=torch.cuda.is_available())
-
-    # Training history storage
-    history = {"train_loss": [],  
-               "val_loss": [],
-               "lr": []}
     
-    best_val_loss = float("inf")
+    # ------------------------------------------------------------
+    # CSV setup
+    # ------------------------------------------------------------
+    csv_path = os.path.join("outputs", "training_metrics.csv")
+    best_csv = os.path.join("outputs", "best_epoch_summary.csv")
     
+    with open(csv_path, mode="w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "epoch",
+            "train_mse",
+            "val_mse",
+            "val_rmse",
+            "val_r2",
+            "rmse_dep", "rmse_anx", "rmse_str", "rmse_tot",
+            "r2_dep", "r2_anx", "r2_str", "r2_tot",
+            "lr"
+        ])
+        
+    best_val_r2 = -float("inf")
+    best_epoch_row = None
+        
     # ------------------------------------------------------------
     # Training loop
     # ------------------------------------------------------------
@@ -116,13 +134,15 @@ def run_train(args):
 
             train_loss_total += loss.item()
 
-        train_loss = train_loss_total / len(train_loader)
+        train_mse = train_loss_total / len(train_loader)
 
         # --------------------------------------------------------
         # VALIDATION PHASE
         # --------------------------------------------------------
         model.eval()
-        val_loss_total = 0
+        
+        all_preds = []
+        all_labels = []
 
         with torch.no_grad():
             for images, pseudo, labels in tqdm(val_loader, desc="Validating"):
@@ -130,61 +150,81 @@ def run_train(args):
                 pseudo = pseudo.to(device)
                 labels = labels.to(device).float()
 
-                with torch.amp.autocast(device_type="cuda"):
+                with torch.amp.autocast(device_type="cuda", enabled=torch.cuda.is_available()):
                     outputs = model(images, pseudo)
-                    loss = criterion(outputs, labels)
 
-                val_loss_total += loss.item()
+                all_preds.append(outputs.cpu().numpy())
+                all_labels.append(labels.cpu().numpy())
+                
+        # Getting a summary of teh run    
+        all_preds = np.vstack(all_preds)
+        all_labels = np.vstack(all_labels)
 
-        val_loss = val_loss_total / len(val_loader)
-
-        print(f"Train Loss: {train_loss:.4f}")
-        print(f"Val Loss:   {val_loss:.4f}")
-
-        # --------------------------------------------------------
-        # Logging + Scheduler Update
-        # --------------------------------------------------------
-        scheduler.step()
+        # Overall metrics
+        val_mse = mean_squared_error(all_labels, all_preds)
+        val_rmse = np.sqrt(val_mse)
+        val_r2 = r2_score(all_labels, all_preds, multioutput="uniform_average")     
+        
+        rmse_dims, r2_dims = [], []
+        for i in range(4):
+            rmse_dims.append(np.sqrt(mean_squared_error(all_labels[:, i], all_preds[:, i])))
+            r2_dims.append(r2_score(all_labels[:, i], all_preds[:, i]))
 
         current_lr = optimizer.param_groups[0]["lr"]
-        print("Current LR:", current_lr)
+        scheduler.step()   
+        
+        # ---------------- LOG ----------------
+        print(f"Train MSE: {train_mse:.4f}")
+        print(f"Val   MSE: {val_mse:.4f}")
+        print(f"Val  RMSE: {val_rmse:.4f}")
+        print(f"Val    R²: {val_r2:.4f}")
 
-        history["train_loss"].append(train_loss)
-        history["val_loss"].append(val_loss)
-        history["lr"].append(current_lr)
-
-        # --------------------------------------------------------
-        # Save best model
-        # --------------------------------------------------------
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        for name, rmse_i, r2_i in zip(DASS_NAMES, rmse_dims, r2_dims):
+            print(f"{name:<12} | RMSE: {rmse_i:.3f} | R²: {r2_i:.3f}")
             
-            filename = f"best_model_{args.task}_regression.pth"
-            save_path = os.path.join("outputs", filename)
+        row = [
+            epoch + 1,
+            train_mse,
+            val_mse,
+            val_rmse,
+            val_r2,
+            *rmse_dims,
+            *r2_dims,
+            current_lr
+        ]
 
-            save_checkpoint(model, save_path)
-            print(f"Saved new BEST model : {filename}")
+        with open(csv_path, "a", newline="") as f:
+            csv.writer(f).writerow(row)
 
-    # Save history file
-    with open("outputs/history.json", "w") as f:
-        json.dump(history, f, indent=4)
+        # ---------------- BEST MODEL (by val R²) ----------------
+        if val_r2 > best_val_r2:
+            best_val_r2 = val_r2
+            best_epoch_row = row
+            save_checkpoint(model, os.path.join("outputs", f"best_model_{args.task}_regression.pth"))
 
-    print("\nTraining complete! History saved to outputs/history.json")
+
+    # ------------------------------------------------------------
+    # Save best epoch summary
+    # ------------------------------------------------------------
+    with open(best_csv, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "epoch", "train_mse", "val_mse", "val_rmse", "val_r2",
+            "rmse_dep", "rmse_anx", "rmse_str", "rmse_tot",
+            "r2_dep", "r2_anx", "r2_str", "r2_tot",
+            "lr"
+        ])
+        writer.writerow(best_epoch_row)
+
+    print(f"\nBest epoch summary saved to {best_csv}")
     
-    print("\nRunning evaluation & plotting...")
-
-    run_all_plots(
-        task=args.task,
-        task_dir=args.task_dir,
-        model_path=os.path.join(
-            "outputs", f"best_model_{args.task}_regression.pth"
-        ),
-        history_path="outputs/history.json",
+    print("\n plotting...")
+    plot_training_from_csv(
+        csv_path="outputs/training_metrics.csv",
         output_dir="outputs"
     )
-    
-    plot_metrics("outputs/history.json")
-    
+    print(f"\nTraining plots saved to {output_dir}")
+        
 # ------------------------------------------------------------
 # CLI
 # ------------------------------------------------------------
