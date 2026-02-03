@@ -5,26 +5,22 @@ from torchvision import models
 
 # -------------------------------------------------------------------
 # ResNet backbone extended to accept PSEUDO-DYNAMIC FEATURES
-# (CLASSIFIER-ONLY TRAINING)
 # -------------------------------------------------------------------
 class ResNetWithDynamicFeatures(nn.Module):
-    def __init__(self, backbone="resnet18", output_dim=4, freeze_backbone=True):
+    def __init__(self, output_dim=4, freeze_backbone=True):
         super().__init__()
 
-        # Load backbone
-        if backbone == "resnet18":
-            base = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+        # Load the pre-trained model
+        self.backbone = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
 
         # Freeze ENTIRE backbone
         if freeze_backbone:
-            for param in base.parameters():
+            for param in self.backbone.parameters():
                 param.requires_grad = False
 
         # Replace classifier with Identity
-        in_features = base.fc.in_features
-        base.fc = nn.Identity()
-
-        self.backbone = base
+        in_features = self.backbone.fc.in_features
+        self.backbone.fc = nn.Identity()
 
         # pseudo-dynamic features → 32D embedding
         self.dynamic_head = nn.Sequential(
@@ -38,9 +34,19 @@ class ResNetWithDynamicFeatures(nn.Module):
         self.regressor = nn.Linear(in_features + 32, output_dim)
 
     def forward(self, x, pseudo_dyn):
+        
         """
-        x:          [B, 3, H, W]
-        pseudo_dyn: [B, 5]
+        Parameters
+        ----------
+        x : torch.Tensor
+            Handwriting images of shape [B, 3, H, W]
+        pseudo_dyn : torch.Tensor
+            Pseudo-dynamic features of shape [B, 5]
+
+        Returns
+        -------
+        torch.Tensor
+            Predicted emotion scores of shape [B, output_dim]
         """
         img_features = self.backbone(x)               # frozen
         dyn_features = self.dynamic_head(pseudo_dyn)  # trainable
@@ -50,8 +56,11 @@ class ResNetWithDynamicFeatures(nn.Module):
 
 
 def build_resnet18(output_dim=4, freeze_backbone=True):
+    
+    """
+    Build ResNet-18 based regression model with pseudo-dynamic features.
+    """
     return ResNetWithDynamicFeatures(
-        backbone="resnet18",
         output_dim=output_dim,
         freeze_backbone=freeze_backbone
     )

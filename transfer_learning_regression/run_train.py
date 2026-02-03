@@ -23,6 +23,25 @@ DASS_NAMES = ["Depression", "Anxiety", "Stress", "Total"]
 # Warmup + Cosine LR Scheduler
 # ------------------------------------------------------------
 def get_scheduler(optimizer, warmup_epochs, total_epochs):
+    
+    """
+    Create a learning rate scheduler with linear warmup followed by cosine decay.
+
+    Parameters
+    ----------
+    optimizer : torch.optim.Optimizer
+        Optimizer whose learning rate will be scheduled.
+    warmup_epochs : int
+        Number of epochs for linear learning rate warmup.
+    total_epochs : int
+        Total number of training epochs.
+
+    Returns
+    -------
+    scheduler : torch.optim.lr_scheduler.LambdaLR
+        Learning rate scheduler implementing warmup and cosine decay.
+    """
+
     def lr_lambda(epoch):
         # Warmup phase
         if epoch < warmup_epochs:
@@ -39,6 +58,28 @@ def get_scheduler(optimizer, warmup_epochs, total_epochs):
 # Training Function
 # ------------------------------------------------------------
 def run_train(args):
+    
+    """
+    Train and evaluate a multi-output regression model for emotion recognition
+    from handwriting data.
+
+    This function handles dataset loading, model initialization, training with
+    MSE loss and mixed-precision optimization, validation using RMSE and R²
+    metrics, and learning rate scheduling with linear warmup followed by cosine
+    decay. Per-epoch metrics are logged to CSV files, and the best-performing
+    model is saved based on validation R².
+
+    Parameters
+    ----------
+    args : argparse.Namespace
+        Training configuration and hyperparameters, including dataset paths,
+        model settings, optimizer parameters, and training options.
+
+    Returns
+    -------
+    None
+        Training results are saved to disk (model checkpoints, CSV logs, plots).
+    """
 
     # Prepare output directory
     os.makedirs("outputs", exist_ok=True)
@@ -60,6 +101,7 @@ def run_train(args):
         label_csv=args.label_csv
     )
 
+    # model
     model = build_resnet18(output_dim=4, freeze_backbone=args.freeze_backbone)
     model = model.to(device)
 
@@ -122,19 +164,20 @@ def run_train(args):
             pseudo = pseudo.to(device)
             labels = labels.to(device).float() 
             optimizer.zero_grad()
-
+            
+            # mixed precision training
             with torch.amp.autocast(device_type="cuda", enabled=torch.cuda.is_available()):
-                outputs = model(images, pseudo)
+                outputs = model(images, pseudo) # model prediction
                 loss = criterion(outputs, labels)
 
             # Backprop
             scaler.scale(loss).backward()
-            scaler.step(optimizer)
+            scaler.step(optimizer) #unscaling
             scaler.update()
 
             train_loss_total += loss.item()
 
-        train_mse = train_loss_total / len(train_loader)
+        train_mse = train_loss_total / len(train_loader) # batch-wise average loss 
 
         # --------------------------------------------------------
         # VALIDATION PHASE
@@ -156,7 +199,7 @@ def run_train(args):
                 all_preds.append(outputs.cpu().numpy())
                 all_labels.append(labels.cpu().numpy())
                 
-        # Getting a summary of teh run    
+        # Getting a summary of the run    
         all_preds = np.vstack(all_preds)
         all_labels = np.vstack(all_labels)
 
@@ -223,7 +266,7 @@ def run_train(args):
         csv_path="outputs/training_metrics.csv",
         output_dir="outputs"
     )
-    print(f"\nTraining plots saved to {output_dir}")
+    print(f"\nTraining plots saved to outputs/")
         
 # ------------------------------------------------------------
 # CLI
