@@ -160,7 +160,6 @@ class AlbumentationsDataset(Dataset):
 
     def __getitem__(self, idx):
         path = self.samples[idx]
-        print("\nchecking the image shape: ", image.shape)
 
         image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
         image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
