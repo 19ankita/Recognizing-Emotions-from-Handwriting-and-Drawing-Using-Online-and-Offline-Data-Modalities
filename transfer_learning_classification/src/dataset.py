@@ -30,10 +30,10 @@ def resolve_task_csv(task_root, task_name):
     """
 
     base_dir = os.path.dirname(task_root)  
+    features_dir = os.path.join(base_dir, "features")
     
     return os.path.join(
-        base_dir,
-        "features",
+        features_dir,
         f"{task_name}_with_dass.csv"
     )
 
