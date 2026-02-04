@@ -126,7 +126,7 @@ def load_dass_labels(csv_path, state):
 
     label_map = {}
     for _, row in df.iterrows():
-        label_map[row["class"]] = score_to_class(row[state], state)
+        label_map[row["id"]] = score_to_class(row[state], state)
 
     return label_map
 
