@@ -9,7 +9,9 @@ import pandas as pd
 from src.pseudo_features import extract_pseudo_dynamic_features
 
 # ===================== PATH SETUP  =====================
-base_dir = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
 
 def resolve_task_csv(task_name):
 
@@ -29,7 +31,10 @@ def resolve_task_csv(task_name):
         Full path to the corresponding task-specific DASS CSV file.
     """
 
-    features_dir = os.path.join(base_dir, "features")
+    features_dir = os.path.join(PROJECT_ROOT, "features")
+    
+    if not os.path.exists(features_dir):
+        raise FileNotFoundError(f"Features directory not found: {features_dir}")
         
     return os.path.join(features_dir, f"{task_name}_with_dass.csv")
 
