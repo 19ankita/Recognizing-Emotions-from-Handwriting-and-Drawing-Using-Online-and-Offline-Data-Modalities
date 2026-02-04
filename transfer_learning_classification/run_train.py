@@ -129,7 +129,7 @@ def run_train(args):
             )  
         
     # model
-    model = build_resnet18(output_dim=NUM_CLASSES, freeze_backbone=args.freeze_backbone)
+    model = build_resnet18(num_classes=NUM_CLASSES, freeze_backbone=args.freeze_backbone)
     model = model.to(device)
 
     # Loss function
