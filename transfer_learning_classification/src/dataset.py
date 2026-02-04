@@ -342,7 +342,6 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     """
 
     train_tf, val_tf = get_transforms(img_size)
-    label_map = load_dass_labels(label_csv, state)
     
     if task != "all" and label_csv is None:
         raise ValueError("label_csv must be provided for single-task loading")

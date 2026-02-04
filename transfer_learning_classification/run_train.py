@@ -15,7 +15,6 @@ from utils.plot_training import plot_metrics_for_state, plot_all_states
 from utils.plot_matrices import plot_confusion_matrix, save_classification_report
 import csv
 
-
 torch.backends.cudnn.benchmark = True
 NUM_CLASSES = 5
 
