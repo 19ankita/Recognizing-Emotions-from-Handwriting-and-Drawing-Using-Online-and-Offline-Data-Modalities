@@ -1,7 +1,5 @@
 import cv2
-import numpy as np
 import matplotlib.pyplot as plt
-import argparse
 from pathlib import Path
 
 from src.pseudo_features import extract_pseudo_dynamic_features
@@ -19,6 +17,26 @@ FEATURE_NAMES = [
 # Utility
 # --------------------------------------------------
 def load_image(path):
+
+    """
+    Load an image from disk and convert it to RGB format.
+
+    Parameters
+    ----------
+    path : str or pathlib.Path
+        Path to the input image file.
+
+    Returns
+    -------
+    numpy.ndarray
+        RGB image array of shape (H, W, 3).
+
+    Raises
+    ------
+    FileNotFoundError
+        If the image file cannot be read.
+    """
+
     img = cv2.imread(str(path))
     if img is None:
         raise FileNotFoundError(f"Could not read image: {path}")
@@ -29,10 +47,27 @@ def load_image(path):
 # Core function (IMPORTABLE from run_train.py)
 # --------------------------------------------------
 def visualize_single_image(image_path, save_dir=None):
+
     """
-    Visualize pseudo-dynamic features for ONE image.
-    Can be called from run_train.py or via CLI.
+    Visualize pseudo-dynamic features extracted from a single handwriting image.
+
+    The function loads an image, computes its pseudo-dynamic feature vector,
+    and generates a figure showing both the handwriting sample and the
+    corresponding feature values.
+
+    Parameters
+    ----------
+    image_path : str or pathlib.Path
+        Path to the handwriting image.
+    save_dir : str or pathlib.Path, optional
+        Directory in which to save the visualization as a PDF. If None,
+        the figure is displayed interactively.
+
+    Returns
+    -------
+    None
     """
+
     img = load_image(image_path)
     features = extract_pseudo_dynamic_features(img)
 
@@ -49,6 +84,24 @@ def visualize_single_image(image_path, save_dir=None):
 # Plot helper
 # --------------------------------------------------
 def plot_single_image(img, features, save_path=None):
+
+    """
+    Plot a handwriting image alongside its pseudo-dynamic feature vector.
+
+    Parameters
+    ----------
+    img : numpy.ndarray
+        RGB handwriting image of shape (H, W, 3).
+    features : array-like
+        Vector of extracted pseudo-dynamic features.
+    save_path : str or pathlib.Path, optional
+        File path to save the generated figure. If None, the figure is shown.
+
+    Returns
+    -------
+    None
+    """
+
     plt.figure(figsize=(10, 4))
 
     # Original image

@@ -11,6 +11,11 @@ import torch
 # De-normalization helper
 # -----------------------------------------------------
 def denormalize(tensor):
+    
+    """
+    Reverses ImageNet normalization on a tensor and converts it to a displayable
+    RGB NumPy array.
+    """
     mean = torch.tensor([0.485, 0.456, 0.406]).reshape(3,1,1)
     std  = torch.tensor([0.229, 0.224, 0.225]).reshape(3,1,1)
     x = tensor * std + mean
@@ -21,6 +26,11 @@ def denormalize(tensor):
 # Build SAME augmentations used in dataset.py
 # -----------------------------------------------------
 def build_train_augs(img_size):
+    
+    """
+    Constructs the set of image augmentation pipelines used during training for
+    visualization and qualitative analysis.
+    """
 
     mean = [0.485, 0.456, 0.406]
     std  = [0.229, 0.224, 0.225]
@@ -76,6 +86,29 @@ def build_train_augs(img_size):
 # AUGMENTATION VISUALIZATION (NO YAML)
 # -----------------------------------------------------
 def visualize_augmentations(task, task_dir, img_size):
+
+    """
+    Visualize the effect of training-time image augmentations on a handwriting sample.
+
+    The function loads a representative handwriting image from the specified task,
+    applies each augmentation individually as well as the full training pipeline,
+    and saves a comparison figure illustrating their effects.
+
+    Parameters
+    ----------
+    task : str
+        Name of the handwriting task or "all" to select a sample from the first
+        available task.
+    task_dir : str
+        Root directory containing handwriting task subfolders.
+    img_size : int
+        Target image size used for resizing during augmentation.
+
+    Returns
+    -------
+    None
+        Saves a PDF visualization of the augmentations to the output directory.
+    """
 
     # -------------------------------------------------
     # Load a sample image

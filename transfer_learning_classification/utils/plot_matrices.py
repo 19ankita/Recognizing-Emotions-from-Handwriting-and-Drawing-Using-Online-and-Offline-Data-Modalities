@@ -4,16 +4,16 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 
 import pandas as pd
-import numpy as np
 
 CLASS_NAMES = [
     "Normal",
     "Mild",
     "Moderate",
     "Severe",
-    "Extremely Severe"
+    "Extremely\nSevere"
 ]
 
+LABELS = list(range(len(CLASS_NAMES)))  # [0,1,2,3,4]
 
 def plot_confusion_matrix(y_true, y_pred, state, output_dir="outputs"):
     """
@@ -53,11 +53,13 @@ def save_classification_report(y_true, y_pred, state, output_dir="outputs"):
 
     """
     Save precision / recall / F1-score table for a given emotional state.
+    Missing classes are reported with zero scores.
     """
 
     report = classification_report(
         y_true,
         y_pred,
+        labels=LABELS,
         target_names=CLASS_NAMES,
         output_dict=True,
         zero_division=0
