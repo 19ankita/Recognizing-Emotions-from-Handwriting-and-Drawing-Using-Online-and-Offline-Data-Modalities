@@ -11,19 +11,12 @@ from src.model import build_resnet18
 from src.utils import save_checkpoint
 from sklearn.metrics import accuracy_score
 import numpy as np
-from utils.plot_training import plot_metrics
+from utils.plot_training import plot_metrics_for_state, plot_all_states
 from utils.plot_matrices import plot_confusion_matrix, save_classification_report
 import csv
 
 
 torch.backends.cudnn.benchmark = True
-CLASS_NAMES = [
-    "Normal",
-    "Mild",
-    "Moderate",
-    "Severe",
-    "Extremely Severe"
-]
 NUM_CLASSES = 5
 
 # ------------------------------------------------------------
@@ -67,26 +60,37 @@ def get_scheduler(optimizer, warmup_epochs, total_epochs):
 def run_train(args):
     
     """
-    Train and evaluate a multi-output regression model for emotion recognition
-    from handwriting data.
+    Train and evaluate a multi-class classification model for a single
+    emotional state (DASS-21) using handwriting images and pseudo-dynamic features.
 
-    This function handles dataset loading, model initialization, training with
-    MSE loss and mixed-precision optimization, validation using RMSE and R²
-    metrics, and learning rate scheduling with linear warmup followed by cosine
-    decay. Per-epoch metrics are logged to CSV files, and the best-performing
-    model is saved based on validation R².
+    The function supports both single-task training and joint training across
+    all handwriting tasks. For each run, a separate classifier is trained for
+    one emotional dimension (depression, anxiety, or stress), following the
+    DASS-21 severity categorization.
+
+    Training is performed using cross-entropy loss with mixed-precision
+    optimization. Model performance is evaluated using classification accuracy,
+    confusion matrices, and class-wise precision/recall/F1 scores. A learning
+    rate schedule with linear warmup and cosine decay is applied.
+
+    Per-epoch training and validation metrics are logged to CSV files.
+    The best-performing model is selected based on validation accuracy and
+    saved to disk.
 
     Parameters
     ----------
     args : argparse.Namespace
-        Training configuration and hyperparameters, including dataset paths,
-        model settings, optimizer parameters, and training options.
+        Parsed command-line arguments specifying dataset paths, training
+        hyperparameters, task selection, and emotional state.
 
     Returns
     -------
     None
-        Training results are saved to disk (model checkpoints, CSV logs, plots).
+        Training artifacts including model checkpoints, metric logs,
+        confusion matrices, classification reports, and training curves
+        are saved to disk.
     """
+
 
     # Prepare output directory
     os.makedirs("outputs", exist_ok=True)
@@ -98,18 +102,35 @@ def run_train(args):
     # --------------------------------------------------------
     # Load dataset(s)
     # --------------------------------------------------------
-    train_loader, val_loader, _ = get_dataloaders(
-        task=args.task,
-        task_root=args.task_dir,
-        img_size=args.img_size,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        val_ratio=args.val_ratio,
-        label_csv=args.label_csv
-    )
-
+    
+    if args.task != "all" and args.label_csv is None:
+        raise ValueError("--label_csv must be provided when task != 'all'")
+   
+    if args.task != "all":
+        train_loader, val_loader, _ = get_dataloaders(
+                task=args.task,
+                task_root=args.task_dir,
+                img_size=args.img_size,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                val_ratio=args.val_ratio,
+                label_csv=args.label_csv,
+                state=args.state
+            )
+    else:  
+        train_loader, val_loader, _ = get_dataloaders(
+                task="all",
+                task_root=args.task_dir,
+                img_size=args.img_size,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+                val_ratio=args.val_ratio,
+                label_csv=None,
+                state=args.state
+            )  
+        
     # model
-    model = build_resnet18(output_dim=4, freeze_backbone=args.freeze_backbone)
+    model = build_resnet18(output_dim=NUM_CLASSES, freeze_backbone=args.freeze_backbone)
     model = model.to(device)
 
     # Loss function
@@ -135,8 +156,8 @@ def run_train(args):
     # ------------------------------------------------------------
     # CSV setup
     # ------------------------------------------------------------
-    csv_path = os.path.join("outputs", "training_metrics.csv")
-    best_csv = os.path.join("outputs", "best_epoch_summary.csv")
+    csv_path = os.path.join("outputs", f"training_metrics_{args.task}_{args.state}.csv")
+    best_csv = os.path.join("outputs", f"best_epoch_summary_{args.task}_{args.state}.csv")
     
     with open(csv_path, mode="w", newline="") as f:
         writer = csv.writer(f)
@@ -179,7 +200,7 @@ def run_train(args):
 
             # Backprop
             scaler.scale(loss).backward()
-            scaler.step(optimizer) #unscaling
+            scaler.step(optimizer) # unscale gradients and optimizer step
             scaler.update()
 
             train_loss_total += loss.item()
@@ -239,16 +260,15 @@ def run_train(args):
         with open(csv_path, "a", newline="") as f:
             csv.writer(f).writerow(row)
 
-        # ---------------- BEST MODEL (by val R²) ----------------
+        # ---------------- BEST MODEL (by validation accuracy) ----------------
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             best_epoch_row = row
             save_checkpoint(
                 model,
-                os.path.join("outputs", f"best_model_{args.task}_depression_cls.pth")
+                os.path.join("outputs", f"best_model_{args.task}_{args.state}_cls.pth")
             )
-
-
+        
     # ------------------------------------------------------------
     # Save best epoch summary
     # ------------------------------------------------------------
@@ -261,20 +281,19 @@ def run_train(args):
 
     print(f"\nBest epoch summary saved to {best_csv}")
     
-    print("\n plotting...")
-    
+    print("\n Saving confusion matrix and classification report...")
     # Confusion matrix
-    plot_confusion_matrix(val_labels, val_preds)
-    
-    # Loss and accuracy curves
-    plot_metrics(
-        csv_path="outputs/training_metrics.csv",
-        output_dir="outputs"
-    )
-    print(f"\nTraining plots saved to outputs/")
-    
+    plot_confusion_matrix(val_labels, val_preds, state=args.state, output_dir="outputs")
+        
     # Classification report
-    save_classification_report(val_labels, val_preds)
+    save_classification_report(val_labels, val_preds, state=args.state, output_dir="outputs")
+    
+    print("\n plotting...")
+   
+    # Loss and accuracy curves
+    plot_all_states(task=args.task, output_dir="outputs")
+    
+    print(f"\nTraining plots saved to outputs/")
         
 # ------------------------------------------------------------
 # CLI
@@ -288,10 +307,13 @@ if __name__ == "__main__":
     parser.add_argument("--task_dir", type=str, required=True,
                         help="Path to your dataset root folder containing class subdirectories.")
     
-    parser.add_argument("--label_csv", type=str, required=True,
-                    help="Path to CSV file with DASS labels")
+    parser.add_argument("--label_csv", type=str, default=None,
+                    help="Path to CSV file with DASS labels (required only for single-task runs)")
+    
+    parser.add_argument("--state", type=str, required=True, choices=["depression", "anxiety", "stress"],
+                    help="Emotional state to classify")
 
-    parser.add_argument("--epochs", type=int, default=20)
+    parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--freeze_backbone", action="store_true")
 

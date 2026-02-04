@@ -10,57 +10,114 @@ from src.pseudo_features import extract_pseudo_dynamic_features
 
 # ===================== PATH SETUP  =====================
 base_dir = os.path.dirname(os.path.abspath(__file__))
-features_dir = os.path.join(base_dir, "features")
+
+def resolve_task_csv(task_root, task_name):
+
+    """
+    Resolve the path to the task-specific DASS annotation CSV.
+
+    Input:
+        task_root (str): Root directory containing all handwriting tasks.
+        task_name (str): Name of the handwriting task.
+
+    Output:
+        str: Full path to the corresponding task-specific DASS CSV file.
+    """
+
+    return os.path.join(
+        task_root,
+        "features",
+        f"{task_name}_with_dass.csv"
+    )
 
 # ------------------------------------------------------------
 # Depression score → class mapping (DASS-21)
 # ------------------------------------------------------------
-def depression_score_to_class(score):
-    """
-    Convert DASS depression score to severity class.
+def score_to_class(score, state):
 
-    Classes:
-    0: Normal (0–9)
-    1: Mild (10–13)
-    2: Moderate (14–20)
-    3: Severe (21–27)
-    4: Extremely Severe (>=28)
     """
-    if score <= 9:
+    Convert a DASS-21 score into a categorical severity class.
+
+    The conversion follows the official DASS-21 severity thresholds and
+    produces a five-class label corresponding to increasing symptom severity.
+
+    Severity classes:
+        0 : Normal
+        1 : Mild
+        2 : Moderate
+        3 : Severe
+        4 : Extremely Severe
+
+    Parameters
+    ----------
+    score : float or int
+        Raw DASS-21 score for a given emotional state.
+    state : str
+        Emotional dimension to be mapped. Must be one of
+        {"depression", "anxiety", "stress"}.
+
+    Returns
+    -------
+    int
+        Severity class label in the range [0, 4].
+    """
+
+
+    if state == "depression":
+        thresholds = [9, 13, 20, 27]
+    elif state == "anxiety":
+        thresholds = [7, 9, 14, 19]
+    elif state == "stress":
+        thresholds = [14, 18, 25, 33]
+    else:
+        raise ValueError(f"Unknown task: {state}")
+
+    if score <= thresholds[0]:
         return 0
-    elif score <= 13:
+    elif score <= thresholds[1]:
         return 1
-    elif score <= 20:
+    elif score <= thresholds[2]:
         return 2
-    elif score <= 27:
+    elif score <= thresholds[3]:
         return 3
     else:
         return 4
 
-
 # ------------------------------------------------------------
 # Load depression classification labels
 # ------------------------------------------------------------
-def load_depression_labels(csv_path):
+def load_dass_labels(csv_path, state):
+
     """
-    Load DASS depression labels and convert them to severity classes.
+    Load DASS-21 scores from a CSV file and convert them into severity classes.
+
+    Each sample is assigned a categorical label based on the DASS-21 severity
+    thresholds corresponding to the selected emotional state.
 
     Parameters
     ----------
     csv_path : str
-        Path to the CSV file containing sample IDs and DASS scores.
+        Path to the task-specific CSV file containing sample identifiers
+        and DASS-21 scores.
+    state : str
+        Emotional dimension to be used as the classification target.
+        Must be one of {"depression", "anxiety", "stress"}.
 
     Returns
     -------
-    label_map : dict
-        Mapping from sample ID to integer class label (0–4).
+    dict
+        Dictionary mapping sample IDs to integer severity class labels (0–4).
     """
 
+
     df = pd.read_csv(csv_path)
+    
+    if state not in ["depression", "anxiety", "stress"]:
+        raise ValueError(f"Invalid task: {state}")
 
     label_map = {}
     for _, row in df.iterrows():
-        label_map[row["class"]] = depression_score_to_class(row["depression"])
+        label_map[row["class"]] = score_to_class(row[state], state)
 
     return label_map
 
@@ -71,20 +128,25 @@ def load_depression_labels(csv_path):
 def get_transforms(img_size):
     
     """
-    Define training and validation image transformations using Albumentations.
-    
+    Define image preprocessing and augmentation pipelines.
+
+    Strong data augmentation is applied during training to improve robustness,
+    while validation images undergo only resizing and normalization.
+
     Parameters
     ----------
     img_size : int
-        Target image height and width.
+        Target height and width of the output images.
 
     Returns
     -------
     train_tf : albumentations.Compose
-        Training transform with strong data augmentation.
+        Training transformation pipeline with geometric and photometric
+        augmentations.
     val_tf : albumentations.Compose
-        Validation transform with resizing and normalization.
+        Validation transformation pipeline with resizing and normalization.
     """
+
 
     mean = [0.485, 0.456, 0.406]
     std  = [0.229, 0.224, 0.225]
@@ -95,7 +157,7 @@ def get_transforms(img_size):
             shift_limit=0.05, scale_limit=0.10, rotate_limit=8, p=0.8
         ),
         A.ElasticTransform(
-            alpha=10, sigma=50, alpha_affine=10, p=0.5
+            alpha=10, sigma=50, p=0.5
         ),
         
         A.GridDistortion(num_steps=5, distort_limit=0.2, p=0.3),
@@ -130,29 +192,31 @@ def get_transforms(img_size):
 class AlbumentationsDataset(Dataset):
     
     """
-    Dataset for loading handwriting images with associated pseudo-dynamic
-    features and DASS regression labels.
+    Dataset for handwriting-based emotion classification using images and
+    pseudo-dynamic features.
 
-    Images are loaded in grayscale, converted to RGB, and returned as NumPy
-    arrays. Pseudo-dynamic features are extracted from the unaugmented image.
+    Each sample consists of a grayscale handwriting image, converted to RGB,
+    a vector of pseudo-dynamic features extracted from the unaugmented image,
+    and a categorical DASS-21 severity label.
 
     Parameters
     ----------
     root : str
-        Root directory containing class-wise subfolders of PNG images.
+        Root directory containing handwriting images organized in
+        class-wise subfolders.
     label_map : dict
-        Mapping from image ID to DASS label tensor
-        (depression, anxiety, stress, total).
+        Mapping from image identifiers to integer DASS-21 severity labels.
 
     Returns
     -------
     image : numpy.ndarray
         Handwriting image of shape (H, W, 3).
     pseudo : torch.Tensor
-        Pseudo-dynamic feature vector.
-    label : torch.Tensor
-        DASS regression targets of shape (4,).
+        Pseudo-dynamic feature vector extracted from the image.
+    label : int
+        DASS-21 severity class label in the range [0, 4].
     """
+
 
     def __init__(self, root, label_map):
         self.label_map = label_map
@@ -196,21 +260,28 @@ class AlbumentationsDataset(Dataset):
 # Wrapper that applies transforms AFTER random_split
 # ------------------------------------------------------------
 class TransformSubset(Dataset):
+
     """
-    Wrapper dataset that applies Albumentations transforms to images only.
+    Dataset wrapper that applies image transformations after dataset splitting.
+
+    This wrapper ensures that data augmentation is applied only to the image
+    component of each sample, while pseudo-dynamic features and labels remain
+    unchanged.
 
     Parameters
     ----------
     subset : torch.utils.data.Dataset
-        Dataset returning (image, pseudo, label).
+        Subset of the dataset returning (image, pseudo, label).
     transform : albumentations.Compose
         Image transformation pipeline.
 
     Returns
     -------
     tuple
-        Transformed image, unchanged pseudo-features, and label.
+        Transformed image tensor, unchanged pseudo-dynamic features,
+        and corresponding label.
     """
+
     def __init__(self, subset, transform):
         self.subset = subset
         self.transform = transform
@@ -225,18 +296,24 @@ class TransformSubset(Dataset):
     
     
     
-def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_ratio, label_csv):
+def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_ratio, label_csv, state):
     
     """
-    Create training and validation DataLoaders for handwriting emotion regression.
+    Create training and validation DataLoaders for handwriting emotion
+    severity classification.
 
-    Supports loading a single task or combining all tasks into one dataset.
-    Applies strong augmentation to training data and normalization to validation data.
+    The function supports both single-task training and joint training across
+    all handwriting tasks. For single-task runs, a task-specific annotation
+    CSV is used. When all tasks are combined, each task is paired with its
+    corresponding annotation file before concatenation.
+
+    Strong data augmentation is applied to the training set, while the
+    validation set is only resized and normalized.
 
     Parameters
     ----------
     task : str
-        Task name or "all" to combine all task subfolders.
+        Name of the handwriting task or "all" to combine all available tasks.
     task_root : str
         Root directory containing task subfolders.
     img_size : int
@@ -244,24 +321,31 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     batch_size : int
         Number of samples per batch.
     num_workers : int
-        Number of DataLoader worker processes.
+        Number of worker processes for data loading.
     val_ratio : float
-        Fraction of data used for validation.
-    label_csv : str
-        Path to CSV file containing DASS labels.
+        Fraction of the dataset reserved for validation.
+    label_csv : str or None
+        Path to the task-specific CSV file containing DASS-21 labels.
+        Must be provided when task != "all".
+    state : str
+        Emotional dimension to be classified. One of
+        {"depression", "anxiety", "stress"}.
 
     Returns
     -------
     train_loader : torch.utils.data.DataLoader
-        DataLoader for training data.
+        DataLoader for the training dataset.
     val_loader : torch.utils.data.DataLoader
-        DataLoader for validation data.
-    num_classes : None
-        Placeholder for compatibility with classification pipelines.
+        DataLoader for the validation dataset.
+    None
+        Placeholder for compatibility with other pipelines.
     """
 
     train_tf, val_tf = get_transforms(img_size)
-    label_map = load_dass_labels(label_csv)
+    label_map = load_dass_labels(label_csv, state)
+    
+    if task != "all" and label_csv is None:
+        raise ValueError("label_csv must be provided for single-task loading")
 
     # ------------------------------
     # CASE 1: SINGLE TASK
@@ -269,6 +353,7 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
     if task != "all":
         task_root = os.path.join(task_root, task)
         print(f"Loading single task: {task_root}")
+        label_map = load_dass_labels(label_csv, state)
         dataset = AlbumentationsDataset(task_root, label_map)
 
     # ------------------------------
@@ -284,7 +369,11 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
         
         for sub in subfolders:
             path = os.path.join(task_root, sub)
-            print(" :", path)
+            csv_path = resolve_task_csv(task_root, sub)
+            
+            print(f" : {path} | labels: {csv_path}")
+            
+            label_map = load_dass_labels(csv_path, state)
             datasets.append(AlbumentationsDataset(path, label_map))
 
         dataset = ConcatDataset(datasets)

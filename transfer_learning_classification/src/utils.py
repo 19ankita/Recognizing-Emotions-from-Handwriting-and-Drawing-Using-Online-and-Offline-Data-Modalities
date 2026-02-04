@@ -1,5 +1,4 @@
 import torch
-import os
 
 def accuracy(outputs, labels):
     preds = outputs.argmax(dim=1)

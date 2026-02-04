@@ -1,13 +1,10 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix, classification_report
 
 import pandas as pd
 import numpy as np
-
-
 
 CLASS_NAMES = [
     "Normal",
@@ -18,7 +15,7 @@ CLASS_NAMES = [
 ]
 
 
-def plot_confusion_matrix(y_true, y_pred, output_path="outputs/confusion_matrix.png"):
+def plot_confusion_matrix(y_true, y_pred, state, output_dir="outputs"):
     """
     Plot and save confusion matrix.
     """
@@ -37,21 +34,25 @@ def plot_confusion_matrix(y_true, y_pred, output_path="outputs/confusion_matrix.
 
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
-    plt.title("Confusion Matrix – Depression Severity Classification")
+    plt.title(f"Confusion Matrix – {state.capitalize()} Severity Classification")
 
     plt.tight_layout()
-    plt.savefig(output_path)
-    plt.savefig(output_path.replace(".png", ".pdf"))
+    
+    png_path = f"{output_dir}/confusion_matrix_{state}.png"
+    pdf_path = png_path.replace(".png", ".pdf")
+
+    plt.savefig(png_path)
+    plt.savefig(pdf_path)
     plt.close()
 
-    print(f"Saved confusion matrix → {output_path}")
+    print(f"Saved confusion matrix to {png_path}")
     
 
 
-def save_classification_report(y_true, y_pred,
-                               output_csv="outputs/classification_report.csv"):
+def save_classification_report(y_true, y_pred, state, output_dir="outputs"):
+
     """
-    Save precision / recall / F1-score table.
+    Save precision / recall / F1-score table for a given emotional state.
     """
 
     report = classification_report(
@@ -63,9 +64,11 @@ def save_classification_report(y_true, y_pred,
     )
 
     df = pd.DataFrame(report).transpose()
-    df.to_csv(output_csv)
+    
+    csv_path = f"{output_dir}/classification_report_{state}.csv"
+    df.to_csv(csv_path)
 
-    print(f"Saved classification report → {output_csv}")
+    print(f"Saved classification report to {csv_path}")
 
     return df
 

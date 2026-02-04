@@ -4,10 +4,18 @@ from skimage.morphology import skeletonize
 from skimage.util import invert
 
 def extract_pseudo_dynamic_features(img):
+
     """
-    img: numpy array (H,W,3) RGB HANDWRITING image
-    returns: 5-D vector of pseudo dynamic features
+    Extract pseudo-dynamic handwriting features from a static image.
+
+    Input:
+        img (numpy.ndarray): RGB handwriting image of shape (H, W, 3).
+
+    Output:
+        numpy.ndarray: 5D float32 feature vector capturing stroke length,
+        thickness, segmentation, aspect ratio, and curvature.
     """
+
 
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
 
