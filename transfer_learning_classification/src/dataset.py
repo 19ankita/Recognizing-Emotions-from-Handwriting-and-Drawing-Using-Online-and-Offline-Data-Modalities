@@ -11,7 +11,7 @@ from src.pseudo_features import extract_pseudo_dynamic_features
 # ===================== PATH SETUP  =====================
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-def resolve_task_csv(task_root, task_name):
+def resolve_task_csv(task_name):
 
     """
     Resolve the path to the task-specific DASS annotation CSV.
@@ -29,13 +29,9 @@ def resolve_task_csv(task_root, task_name):
         Full path to the corresponding task-specific DASS CSV file.
     """
 
-    base_dir = os.path.dirname(task_root)  
     features_dir = os.path.join(base_dir, "features")
-    
-    return os.path.join(
-        features_dir,
-        f"{task_name}_with_dass.csv"
-    )
+        
+    return os.path.join(features_dir, f"{task_name}_with_dass.csv")
 
 
 # ------------------------------------------------------------
@@ -376,7 +372,7 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
         
         for sub in subfolders:
             path = os.path.join(task_root, sub)
-            csv_path = resolve_task_csv(task_root, sub)
+            csv_path = resolve_task_csv(sub)
             
             print(f" : {path} | labels: {csv_path}")
             
