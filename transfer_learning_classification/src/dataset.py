@@ -16,19 +16,27 @@ def resolve_task_csv(task_root, task_name):
     """
     Resolve the path to the task-specific DASS annotation CSV.
 
-    Input:
-        task_root (str): Root directory containing all handwriting tasks.
-        task_name (str): Name of the handwriting task.
+    Parameters
+    ----------
+    task_root : str
+        Path to the emothaw_tasks directory.
+    task_name : str
+        Name of the handwriting task.
 
-    Output:
-        str: Full path to the corresponding task-specific DASS CSV file.
+    Returns
+    -------
+    str
+        Full path to the corresponding task-specific DASS CSV file.
     """
 
+    base_dir = os.path.dirname(task_root)  
+    
     return os.path.join(
-        task_root,
+        base_dir,
         "features",
         f"{task_name}_with_dass.csv"
     )
+
 
 # ------------------------------------------------------------
 # Depression score → class mapping (DASS-21)
