@@ -280,12 +280,13 @@ def run_train(args):
 
     print(f"\nBest epoch summary saved to {best_csv}")
     
-    print("\n Saving confusion matrix and classification report...")
     # Confusion matrix
+    print("\n Saving confusion matrix...")
     plot_confusion_matrix(val_labels, val_preds, task=args.task, state=args.state, output_dir="outputs")
         
     # Classification report
-    save_classification_report(val_labels, val_preds, state=args.state, output_dir="outputs")
+    print("\n Saving classification report...")
+    save_classification_report(val_labels, val_preds, task=args.task, state=args.state, output_dir="outputs")
     
     print("\n plotting...")
    
