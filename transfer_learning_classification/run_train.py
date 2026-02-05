@@ -291,7 +291,23 @@ def run_train(args):
     print("\n plotting...")
    
     # Loss and accuracy curves
-    plot_all_states(task=args.task, output_dir="outputs")
+    print("\n plotting training curves...")
+
+    if args.task == "all":
+        # Plot combined curves for all emotional states
+        plot_all_states(task=args.task, output_dir="outputs")
+    else:
+        # Plot curves only for the selected state
+        csv_path = os.path.join(
+            "outputs",
+            f"training_metrics_{args.task}_{args.state}.csv"
+        )
+
+        plot_metrics_for_state(
+            csv_path=csv_path,
+            state=args.state,
+            output_dir="outputs"
+        )
     
     print(f"\nTraining plots saved to outputs/")
         
