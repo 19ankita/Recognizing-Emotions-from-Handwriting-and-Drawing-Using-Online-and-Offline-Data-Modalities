@@ -176,8 +176,8 @@ def run_train(args):
             scaler.step(optimizer) # unscale gradients and optimizer step
             scaler.update()
 
-        train_preds.append(outputs.detach().cpu().numpy())
-        train_labels.append(labels.cpu().numpy())
+            train_preds.append(outputs.detach().cpu().numpy())
+            train_labels.append(labels.cpu().numpy())
 
         # stack + rescale
         train_preds = np.vstack(train_preds) * DASS_SCALE
