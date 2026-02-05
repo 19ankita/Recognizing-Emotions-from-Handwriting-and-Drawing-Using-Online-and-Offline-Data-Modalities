@@ -5,6 +5,7 @@ from torchvision import models
 
 # -------------------------------------------------------------------
 # ResNet backbone extended to accept PSEUDO-DYNAMIC FEATURES
+# with bounded regression head (sigmoid)
 # -------------------------------------------------------------------
 class ResNetWithDynamicFeatures(nn.Module):
     def __init__(self, output_dim=4, freeze_backbone=True):
@@ -32,6 +33,9 @@ class ResNetWithDynamicFeatures(nn.Module):
 
         # Regression head
         self.regressor = nn.Linear(in_features + 32, output_dim)
+        
+        # Sigmoid for bounded outputs
+        self.activation = nn.Sigmoid()
 
     def forward(self, x, pseudo_dyn):
         
@@ -52,7 +56,12 @@ class ResNetWithDynamicFeatures(nn.Module):
         dyn_features = self.dynamic_head(pseudo_dyn)  # trainable
 
         fused = torch.cat([img_features, dyn_features], dim=1)
-        return self.regressor(fused)
+        
+        # Regression + bounding
+        out = self.regressor(fused)
+        out = self.activation(out)
+        
+        return out
 
 
 def build_resnet18(output_dim=4, freeze_backbone=True):

@@ -17,6 +17,7 @@ import csv
 
 torch.backends.cudnn.benchmark = True
 DASS_NAMES = ["Depression", "Anxiety", "Stress", "Total"]
+DASS_SCALE = np.array([42, 42, 42, 126], dtype=np.float32)
 
 # ------------------------------------------------------------
 # Warmup + Cosine LR Scheduler
@@ -156,7 +157,8 @@ def run_train(args):
         # TRAINING PHASE
         # --------------------------------------------------------
         model.train()
-        train_loss_total = 0
+        train_preds = []
+        train_labels = []
 
         for images, pseudo, labels in tqdm(train_loader, desc="Training"):
             images = images.to(device)  
@@ -171,12 +173,17 @@ def run_train(args):
 
             # Backprop
             scaler.scale(loss).backward()
-            scaler.step(optimizer) #unscaling
+            scaler.step(optimizer) # unscale gradients and optimizer step
             scaler.update()
 
-            train_loss_total += loss.item()
+        train_preds.append(outputs.detach().cpu().numpy())
+        train_labels.append(labels.cpu().numpy())
 
-        train_mse = train_loss_total / len(train_loader) # batch-wise average loss 
+        # stack + rescale
+        train_preds = np.vstack(train_preds) * DASS_SCALE
+        train_labels = np.vstack(train_labels) * DASS_SCALE
+
+        train_mse = mean_squared_error(train_labels, train_preds)
 
         # --------------------------------------------------------
         # VALIDATION PHASE
@@ -199,8 +206,9 @@ def run_train(args):
                 all_labels.append(labels.cpu().numpy())
                 
         # Getting a summary of the run    
-        all_preds = np.vstack(all_preds)
-        all_labels = np.vstack(all_labels)
+        all_preds = np.vstack(all_preds) * DASS_SCALE
+        all_labels = np.vstack(all_labels) * DASS_SCALE
+
 
         # Overall metrics
         val_mse = mean_squared_error(all_labels, all_preds)
