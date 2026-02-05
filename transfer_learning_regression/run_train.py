@@ -226,13 +226,13 @@ def run_train(args):
             
         row = [
             epoch + 1,
-            train_mse,
-            val_mse,
-            val_rmse,
-            val_r2,
-            *rmse_dims,
-            *r2_dims,
-            current_lr
+            round(train_mse, 4),
+            round(val_mse, 4),
+            round(val_rmse, 4),
+            round(val_r2, 4),
+            *[round(x, 4) for x in rmse_dims],
+            *[round(x, 4) for x in r2_dims],
+            round(current_lr, 6)
         ]
 
         with open(csv_path, "a", newline="") as f:

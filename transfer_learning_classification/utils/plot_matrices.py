@@ -15,7 +15,7 @@ CLASS_NAMES = [
 
 LABELS = list(range(len(CLASS_NAMES)))  # [0,1,2,3,4]
 
-def plot_confusion_matrix(y_true, y_pred, state, output_dir="outputs"):
+def plot_confusion_matrix(y_true, y_pred, task, state, output_dir="outputs"):
     """
     Plot and save confusion matrix.
     """
@@ -34,11 +34,11 @@ def plot_confusion_matrix(y_true, y_pred, state, output_dir="outputs"):
 
     plt.xlabel("Predicted Label")
     plt.ylabel("True Label")
-    plt.title(f"Confusion Matrix – {state.capitalize()} Severity Classification")
+    plt.title(f"{task.capitalize()}: Confusion Matrix – {state.capitalize()} Severity Classification")
 
     plt.tight_layout()
     
-    png_path = f"{output_dir}/confusion_matrix_{state}.png"
+    png_path = f"{output_dir}/confusion_matrix_{state}_{task}.png"
     pdf_path = png_path.replace(".png", ".pdf")
 
     plt.savefig(png_path)
@@ -49,7 +49,7 @@ def plot_confusion_matrix(y_true, y_pred, state, output_dir="outputs"):
     
 
 
-def save_classification_report(y_true, y_pred, state, output_dir="outputs"):
+def save_classification_report(y_true, y_pred, task, state, output_dir="outputs"):
 
     """
     Save precision / recall / F1-score table for a given emotional state.
@@ -67,7 +67,7 @@ def save_classification_report(y_true, y_pred, state, output_dir="outputs"):
 
     df = pd.DataFrame(report).transpose()
     
-    csv_path = f"{output_dir}/classification_report_{state}.csv"
+    csv_path = f"{output_dir}/classification_report_{state}_{task}.csv"
     df.to_csv(csv_path)
 
     print(f"Saved classification report to {csv_path}")
