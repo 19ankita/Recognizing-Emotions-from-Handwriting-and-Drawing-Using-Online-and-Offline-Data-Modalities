@@ -249,11 +249,11 @@ def run_train(args):
             
         row = [
             epoch + 1,
-            train_loss,
-            val_loss,
-            train_acc,
-            val_acc,
-            current_lr
+            round(train_loss, 4),
+            round(val_loss, 4),
+            round(train_acc, 4),
+            round(val_acc, 4),
+            round(current_lr, 4)
         ]
 
         with open(csv_path, "a", newline="") as f:
@@ -282,7 +282,7 @@ def run_train(args):
     
     print("\n Saving confusion matrix and classification report...")
     # Confusion matrix
-    plot_confusion_matrix(val_labels, val_preds, state=args.state, output_dir="outputs")
+    plot_confusion_matrix(val_labels, val_preds, task=args.task, state=args.state, output_dir="outputs")
         
     # Classification report
     save_classification_report(val_labels, val_preds, state=args.state, output_dir="outputs")
