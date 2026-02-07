@@ -7,11 +7,33 @@ import os
 import pandas as pd
 
 from src.pseudo_features import extract_pseudo_dynamic_features
+from sklearn.model_selection import StratifiedShuffleSplit
+import numpy as np
 
 # ===================== PATH SETUP  =====================
 PROJECT_ROOT = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
 )
+
+# ------------------------------
+# Helper utilities
+# ------------------------------
+def extract_labels(dataset):
+    """
+    Extract class labels from a Dataset or ConcatDataset.
+    Assumes __getitem__ returns (image, pseudo, label).
+    """
+    labels = []
+
+    if isinstance(dataset, ConcatDataset):
+        for sub_ds in dataset.datasets:
+            for i in range(len(sub_ds)):
+                labels.append(sub_ds[i][2])
+    else:
+        for i in range(len(dataset)):
+            labels.append(dataset[i][2])
+
+    return np.array(labels)
 
 def resolve_task_csv(task_name):
 
@@ -388,18 +410,25 @@ def get_dataloaders(task, task_root, img_size, batch_size, num_workers, val_rati
         
         
     # --------------------------------------------------------
-    # TRAIN/VAL SPLIT
+    # STRATIFIED TRAIN / VAL SPLIT
     # --------------------------------------------------------
-    total_len = len(dataset)
-    val_len = int(total_len * val_ratio)
-    train_len = total_len - val_len
+    labels = extract_labels(dataset)
+    indices = np.arange(len(labels))
 
-    train_subset, val_subset = random_split(
-        dataset,
-        [train_len, val_len],
-        generator=torch.Generator().manual_seed(42)
+    sss = StratifiedShuffleSplit(
+        n_splits=1,
+        test_size=val_ratio,
+        random_state=42
     )
-        
+
+    train_idx, val_idx = next(sss.split(indices, labels))
+
+    train_subset = torch.utils.data.Subset(dataset, train_idx)
+    val_subset   = torch.utils.data.Subset(dataset, val_idx)
+    
+    print("Train distribution:", np.bincount(labels[train_idx]))
+    print("Val distribution:  ", np.bincount(labels[val_idx]))
+
     # --------------------------------------------------------
     # APPLY TRANSFORMS 
     # --------------------------------------------------------   

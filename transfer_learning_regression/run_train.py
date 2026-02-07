@@ -209,7 +209,6 @@ def run_train(args):
         all_preds = np.vstack(all_preds) * DASS_SCALE
         all_labels = np.vstack(all_labels) * DASS_SCALE
 
-
         # Overall metrics
         val_mse = mean_squared_error(all_labels, all_preds)
         val_rmse = np.sqrt(val_mse)
