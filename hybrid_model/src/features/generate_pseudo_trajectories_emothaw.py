@@ -6,6 +6,8 @@ from torchvision import transforms
 
 from src.models.reverse_model import ReverseModel
 
+print("THIS IS THE FILE BEING EXECUTED")
+
 # ---------------------------
 # CONFIG
 # ---------------------------
@@ -14,6 +16,7 @@ OUT_ROOT = "data/EMOTHAW/pseudo_trajectories"
 MODEL_PATH = "checkpoint/reverse_model.pth"
 
 TASK = "cursive_writing"
+print("TASK VALUE:", TASK)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 SEQ_LEN = 200
