@@ -27,6 +27,26 @@ results_dir  = os.path.join(base_dir, "results")
 
 
 def extract_global_user(id_str):
+
+    """
+    Map a file/sample ID string to a global user index across two collections.
+
+    Input
+    -----
+    id_str : str
+        Sample identifier containing a user marker of the form:
+        - 'u<digits>' for Collection 1 users (1–45)
+        - 'v<digits>' for Collection 2 users (1–84)
+        Example: "u12_taskX" or "v03_house".
+
+    Output
+    ------
+    user_id : int or None
+        Global user ID:
+        - If prefix is 'u': returns the extracted user number unchanged.
+        - If prefix is 'v': returns extracted user number + 45 (offset to avoid overlap).
+        Returns None if no pattern is found.
+    """
     match = re.search(r"([uv])(\d+)", id_str)
     if not match:
         return None
@@ -40,8 +60,30 @@ def extract_global_user(id_str):
 
 
 def prepare_labels():
-    """Clean the DASS Excel file and save to labels/DASS_scores_clean.csv"""
 
+    """
+    Load DASS subscale labels, convert collection-specific user IDs into a single
+    global user index, compute TOTAL DASS, and save the merged label table.
+
+    Input
+    -----
+    Reads:
+      - labels/DASS_scores_clean.csv (semicolon-separated), expected to contain at least:
+        ['user', 'depression', 'anxiety', 'stress'] in the first 45 rows for Collection 1,
+        and the remaining rows for Collection 2 (user numbering restarts).
+
+    Output
+    ------
+    labels_global : pandas.DataFrame
+        Cleaned label table with globally unique user IDs and an added 'total' column.
+        Also writes:
+          - labels/DASS_scores_global.csv (comma-separated by default in pandas)
+
+    Notes
+    -----
+    - Collection 2 users are offset by +45 to make user IDs unique.
+    - TOTAL DASS is computed as depression + anxiety + stress.
+    """
     os.makedirs(labels_dir, exist_ok=True)
     
     input_path = os.path.join(labels_dir, "DASS_scores_clean.csv")
@@ -74,6 +116,45 @@ def prepare_labels():
 
 def main():
 
+    """
+    End-to-end experiment runner for handwriting-based DASS regression.
+
+    Pipeline
+    --------
+    1) Parse CLI arguments to select tasks and experiment mode:
+       - total     : predict TOTAL DASS
+       - multi     : joint multi-output prediction (depression, anxiety, stress)
+       - subscales : train separate models for each subscale
+       - all       : run all of the above
+    2) Load and prepare global DASS labels (prepare_labels()).
+    3) For each task:
+       - Read all .svc/.SVC files from dataset/<task>/ (read_all_svc_files)
+       - Convert trajectories to a point-level DataFrame with an 'id'
+       - Extract per-id feature vectors (run_feature_extraction)
+       - Merge features with DASS labels via a global user ID mapping (extract_global_user)
+    4) Train and evaluate multiple models (linear + regularized + tree-based),
+       optionally with cross-validation, hyperparameter search, and SHAP explanations.
+    5) Save a summary CSV of all experiment metrics to results/model_summary.csv.
+
+    Input
+    -----
+    Command-line arguments:
+      tasks (positional) : list of task folder names under dataset/
+      --all-tasks        : run all tasks found in dataset/
+      --mode             : {total, subscales, multi, all}
+      --cv               : enable K-Fold CV reporting
+      --search           : enable GridSearchCV/RandomizedSearchCV
+      --cv-folds         : number of folds (default=5)
+      --shap             : run SHAP analysis per trained model
+
+    Output
+    ------
+    None
+        Writes intermediate feature CSVs to features/ and a final model summary CSV:
+        - features/<task>_features.csv
+        - features/<task>_with_dass.csv
+        - results/model_summary.csv
+    """
     # --- Parse command line arguments ---
     parser = argparse.ArgumentParser(description="Run regression experiments on handwriting tasks")
     parser.add_argument("tasks", nargs="*", help="List of tasks (e.g., words cursive house)")

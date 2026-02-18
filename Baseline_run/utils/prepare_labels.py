@@ -2,6 +2,7 @@ import pandas as pd
 import os
 
 def prepare_labels(input_path="DASS_scores.xls", output_path="labels/DASS_scores_clean.csv"):
+    
     """
     Clean the raw DASS Excel file and compute the Total DASS score.
     

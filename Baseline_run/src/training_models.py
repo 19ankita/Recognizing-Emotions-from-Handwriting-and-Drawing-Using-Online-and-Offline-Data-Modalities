@@ -8,8 +8,43 @@ from sklearn.multioutput import MultiOutputRegressor
 
 
 def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5):
+
     """
-    Run cross-validation and optional hyperparameter tuning.
+    Evaluate a regression model using optional cross-validation and optional
+    hyperparameter tuning (GridSearchCV / RandomizedSearchCV).
+
+    Input
+    -----
+    model : sklearn estimator
+        Base regression model or a wrapped model (e.g., MultiOutputRegressor).
+    X : array-like of shape (n_samples, n_features)
+        Training feature matrix.
+    y : array-like of shape (n_samples,) or (n_samples, n_outputs)
+        Training target(s).
+    model_name : str
+        Human-readable model name used to select a predefined search space.
+    do_cv : bool, default=False
+        If True, run K-Fold CV and report mean/std of MSE.
+    do_search : bool, default=False
+        If True, perform hyperparameter tuning (grid or random depending on model).
+    cv : int, default=5
+        Number of folds for CV and/or hyperparameter search.
+
+    Output
+    ------
+    best_model : sklearn estimator
+        The tuned estimator if `do_search=True`, otherwise the original model.
+    cv_mse : float or None
+        Mean CV MSE (from search best score or from cross_val_score).
+        None if neither CV nor search is executed.
+    cv_std : float or None
+        Standard deviation of CV scores. None if neither CV nor search is executed.
+
+    Notes
+    -----
+    - For MultiOutputRegressor, parameter names are automatically prefixed with
+      'estimator__' during hyperparameter tuning.
+    - Hyperparameter search uses negative MSE scoring internally.
     """
     best_model = model
     cv_mse, cv_std = None, None
@@ -92,16 +127,44 @@ def evaluate_with_cv(model, X, y, model_name, do_cv=False, do_search=False, cv=5
 
 
 def run_model(merged_csv, task_name, model, mode, model_name, target="total", do_cv=False, do_search=False, cv_folds=5, do_shap=False):
-    """
-    Train any regression model on TOTAL DASS score and return metrics.
 
-    Args:
-        merged_csv (str): Path to merged features + DASS file.
-        task_name (str): Task name (e.g., words, cursive).
-        model: sklearn regression model instance (e.g., LinearRegression()).
-        model_name (str): Name of the model (for logging + results).
     """
-    
+    Train and evaluate a single-output regression model for TOTAL DASS score.
+
+    Input
+    -----
+    merged_csv : str
+        Path to a CSV containing extracted features and DASS labels.
+    task_name : str
+        Name of the handwriting task (e.g., "house", "words") for logging.
+    model : sklearn estimator
+        Regression model instance (e.g., LinearRegression(), RandomForestRegressor()).
+    mode : str
+        Experiment mode label (kept for bookkeeping; not used internally here).
+    model_name : str
+        Model name used for logging and selecting hyperparameter search space.
+    target : str, default="total"
+        Only "total" is supported in this function.
+    do_cv : bool, default=False
+        If True, compute K-Fold CV MSE on the training split.
+    do_search : bool, default=False
+        If True, run hyperparameter tuning on the training split.
+    cv_folds : int, default=5
+        Number of folds for CV and/or hyperparameter search.
+    do_shap : bool, default=False
+        If True, run SHAP explanations after training.
+
+    Output
+    ------
+    results : dict
+        Dictionary containing evaluation metrics on the held-out test split:
+        {Task, Model, mode, Target, MSE, RMSE, R2, CV_MSE, CV_STD}.
+
+    Raises
+    ------
+    ValueError
+        If target is not "total".
+    """
     # Load merged features + DASS labels for words task
     df = pd.read_csv(merged_csv)
     # Define X (all features except id/user and labels)
@@ -153,8 +216,37 @@ def run_model(merged_csv, task_name, model, mode, model_name, target="total", do
 
 
 def run_multioutput_model(merged_csv, task_name, model, mode, model_name, do_cv=False, do_search=False, cv_folds=5, do_shap=False):
+
     """
-    Train regression model (multi-output) on Depression, Anxiety, Stress simultaneously.
+    Train and evaluate a multi-output regression model for the three DASS subscales
+    (Depression, Stress, Anxiety) simultaneously using MultiOutputRegressor.
+
+    Input
+    -----
+    merged_csv : str
+        Path to a CSV containing extracted features and subscale labels.
+    task_name : str
+        Task name for logging.
+    model : sklearn estimator
+        Base regressor that will be wrapped by MultiOutputRegressor.
+    mode : str
+        Experiment mode label (for bookkeeping).
+    model_name : str
+        Model name used for logging and selecting hyperparameter search space.
+    do_cv : bool, default=False
+        If True, run CV on the multi-output model using negative MSE scoring.
+    do_search : bool, default=False
+        If True, tune hyperparameters on the multi-output model.
+    cv_folds : int, default=5
+        Number of folds for CV and/or hyperparameter search.
+    do_shap : bool, default=False
+        If True, compute SHAP for each fitted sub-estimator separately.
+
+    Output
+    ------
+    results : list[dict]
+        One dictionary per target in ["Depression", "Stress", "Anxiety"], each with:
+        {Task, Model, mode, Target, MSE, RMSE, R2, CV_MSE, CV_STD}.
     """
     df = pd.read_csv(merged_csv)
     # Features
@@ -211,12 +303,41 @@ def run_multioutput_model(merged_csv, task_name, model, mode, model_name, do_cv=
 
 
 def run_separate_subscale_models(merged_csv, task_name, model, mode, model_name, do_cv=False, do_search=False, cv_folds=5, do_shap=False):
+
     """
-    Run 3 separate regressions:
-        - One for Depression
-        - One for Anxiety
-        - One for Stress
-    Returns metrics for each.
+    Train and evaluate three separate single-output regression models:
+    one each for Depression, Anxiety, and Stress.
+
+    Input
+    -----
+    merged_csv : str
+        Path to a CSV containing extracted features and subscale labels.
+    task_name : str
+        Task name for logging.
+    model : sklearn estimator
+        Regression model instance (re-fit independently per target).
+    mode : str
+        Experiment mode label (for bookkeeping).
+    model_name : str
+        Model name used for logging and selecting hyperparameter search space.
+    do_cv : bool, default=False
+        If True, compute K-Fold CV MSE on the training split for each target.
+    do_search : bool, default=False
+        If True, run hyperparameter tuning separately for each target.
+    cv_folds : int, default=5
+        Number of folds for CV and/or hyperparameter search.
+    do_shap : bool, default=False
+        If True, run SHAP explanations for each trained target model.
+
+    Output
+    ------
+    results : list[dict]
+        One dictionary per available target in ["Depression", "Anxiety", "Stress"], each with:
+        {Task, Model, mode, Target, MSE, RMSE, R2, CV_MSE, CV_STD}.
+
+    Notes
+    -----
+    If a target column is missing from the CSV, that target is skipped.
     """
     df = pd.read_csv(merged_csv)
     X = df.drop(columns=["id", "user", "depression", "anxiety", "stress", "total"], errors="ignore")

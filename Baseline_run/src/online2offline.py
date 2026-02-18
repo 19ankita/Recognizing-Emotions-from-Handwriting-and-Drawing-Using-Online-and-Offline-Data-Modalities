@@ -4,13 +4,31 @@ import matplotlib.pyplot as plt
 import os
 import glob
 
-# 读取 .svc 文件
+
 def read_svc_file(file_path):
+    
+    """
+    Read a single .svc handwriting file and return its samples as a NumPy array.
+
+    Input
+    -----
+    file_path : str
+        Path to a .svc file. The first line is ignored. Each subsequent valid line
+        must contain 7 whitespace-separated integers:
+        (x, y, timestamp, pen_status, azimuth, altitude, pressure).
+
+    Output
+    ------
+    data : np.ndarray of shape (N, 7), dtype=int
+        Array of samples with columns:
+        [x, y, timestamp, pen_status, azimuth, altitude, pressure].
+        Lines that do not have exactly 7 values are skipped.
+    """
+
     data = []
     with open(file_path, 'r') as file:
         lines = file.readlines()
-        for line in lines[1:]:  # 跳过第一行（无意义的单个数字）
-            # 分割每行数据#
+        for line in lines[1:]:  
             parts = line.strip().split()
             if len(parts)!= 7:
                 continue
@@ -19,41 +37,77 @@ def read_svc_file(file_path):
     return np.array(data)
 
 
-# 生成笔迹图像
-def plot_handwriting(data, output_path):
-    # 创建画布
-    plt.figure(figsize=(10, 10))
-    #plt.gca().invert_yaxis()  # 反转 y 轴，因为数位板的坐标原点通常在左上角
 
-    # 初始化变量
+def plot_handwriting(data, output_path):
+
+    """
+    Render a handwriting trajectory to a PNG image using pen pressure for stroke width.
+
+    Input
+    -----
+    data : np.ndarray of shape (N, 7)
+        Handwriting samples in the format:
+        [x, y, timestamp, pen_status, azimuth, altitude, pressure].
+        pen_status: 1 = pen down (draw), 0 = pen up (lift).
+        pressure is assumed to be in [0, 1023] for linewidth scaling.
+
+    output_path : str
+        File path to save the output image (e.g., .png).
+
+    Output
+    ------
+    None
+        Saves a PNG image to `output_path`. Does not return a value.
+
+    Notes
+    -----
+    - The trajectory is rotated 90° counterclockwise: (x, y) -> (-y, x).
+    - Consecutive pen-down points are connected with line segments.
+    - Line width is scaled by pressure: 0.1 + (pressure/1023)*5.
+    """
+
+
+    plt.figure(figsize=(10, 10))
+
     prev_x, prev_y = None, None
     current_line = []
 
-    # 遍历数据点
     for x, y, _, pen_status, _, _, pressure in data:
-        # 逆时针旋转 90 度：交换 x 和 y，并调整符号
-        rotated_x = -y  # 新 x = -旧 y
-        rotated_y = x    # 新 y = 旧 x
+        rotated_x = -y  
+        rotated_y = x    
 
-        if pen_status == 1:  # 笔在纸上
+        if pen_status == 1: 
             if prev_x is not None and prev_y is not None:
-                # 根据笔压调整线条粗细
-                line_width = 0.1 + (pressure / 1023) * 5  # 笔压归一化并映射到线条粗细
+                line_width = 0.1 + (pressure / 1023) * 5  
                 plt.plot([prev_x, rotated_x], [prev_y, rotated_y], color='black', linewidth=line_width, solid_capstyle='round')
             prev_x, prev_y = rotated_x, rotated_y
-        else:  # 笔在空中
+        else:  
             prev_x, prev_y = None, None
 
-    # 设置图像属性
-    plt.axis('off')  # 关闭坐标轴
-    plt.gca().set_aspect('equal', adjustable='box')  # 保持比例
+    plt.axis('off')  
+    plt.gca().set_aspect('equal', adjustable='box') 
 
-    # 保存图像
     plt.savefig(output_path, bbox_inches='tight', pad_inches=0)
     plt.close()
 
-# 主函数
 def main():
+    
+    """
+    Convert all .svc files in a folder into pressure-aware handwriting PNG images.
+
+    Input
+    -----
+    Uses hard-coded paths:
+      - input_dir  = './Dataset/house'
+      - output_dir = './image/house'
+
+    Output
+    ------
+    None
+        For each .svc/.SVC file found in input_dir, saves a corresponding .png
+        image into output_dir and prints the saved file path.
+    """
+
     input_dir = './Dataset/house'    # top-level input folder
     output_dir = './image/house'     # top-level output folder for PNGs
     os.makedirs(output_dir, exist_ok=True)
@@ -75,10 +129,8 @@ def main():
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 
-        # 读取数据
         data = read_svc_file(file_path)
 
-        # 生成笔迹图像
         plot_handwriting(data, output_path)
         print(f"saved: {output_path}")
 

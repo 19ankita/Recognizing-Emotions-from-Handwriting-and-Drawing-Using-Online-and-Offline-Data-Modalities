@@ -20,10 +20,6 @@ def instantaneous_speed(x, y, t):
     return np.sqrt(vx**2 + vy**2)
 
 def acceleration(speeds):
-    """
-    Compute acceleration from consecutive speed samples.
-    Acceleration is defined as delta(speed) per step.
-    """
     if len(speeds) < 2:
         return np.array([])
     return np.diff(speeds)
@@ -43,11 +39,50 @@ def stop_ratio(speeds):
 
 # ---------- Main feature extractor ----------    
 def extract_features(df):
-    """    
-    df must have columns: 
-    ['x','y','timestamp','pen_status','azimuth','altitude','pressure','id']
+
     """
-    
+    Extract temporal, kinematic, geometric, pressure, slant, and pen-up features
+    from a single handwriting trajectory.
+
+    Input
+    -----
+    df : pandas.DataFrame
+        A DataFrame containing one sample/trajectory with at least these columns:
+        - 'x' (float): x-coordinate sequence
+        - 'y' (float): y-coordinate sequence
+        - 'timestamp' (float/int): time sequence (must be non-decreasing)
+        - 'pen_status' (int): 1 = pen down, 0 = pen up
+        - 'pressure' (float): pressure values (used only for pen-down points)
+        Other columns may be present (e.g., azimuth, altitude, id) and are ignored.
+
+    Output
+    ------
+    features : dict[str, float]
+        Dictionary mapping feature names to scalar values:
+        Temporal:
+          - F1_in_air_time, F2_on_paper_time, F3_total_time, F4_stroke_count, duty_cycle
+        Kinematic:
+          - path_length, median_acceleration, median_speed, p95_speed, stop_ratio
+        Geometric:
+          - straightness, dominant_angle, direction_concentration
+        Pressure:
+          - mean_pressure
+        Bounding box:
+          - width, height, aspect_ratio
+        Ink density:
+          - ink_density (path_length / convex hull area of pen-down points)
+        Slant:
+          - mean_slant, std_slant, abs_mean_slant
+        Pen-up:
+          - pen_up_path_length, median_pen_up_speed, p95_pen_up_speed, pen_up_ratio
+
+    Notes
+    -----
+    - Speed is computed from consecutive points where dt > 0.
+    - "Acceleration" is computed as diff(speed) per step (not time-normalized).
+    - Convex hull area is computed on pen-down points; if it fails or is zero,
+      ink_density is set to 0.
+    """  
     x = df["x"].values
     y = df["y"].values
     t = df["timestamp"].values

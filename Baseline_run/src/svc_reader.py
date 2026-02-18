@@ -4,8 +4,25 @@ import numpy as np
 
 
 def read_svc_file(file_path):
-    """Read a single .svc file and return as numpy array"""
 
+    """
+    Read a single .svc handwriting file and return its samples as a NumPy array.
+
+    Input
+    -----
+    file_path : str
+        Path to a .svc file. The first line (often the number of points) is skipped.
+        Each valid subsequent line must contain 7 whitespace-separated integers:
+        x, y, timestamp, pen_status, azimuth, altitude, pressure.
+
+    Output
+    ------
+    data : np.ndarray of shape (N, 7), dtype=int
+        Array of handwriting samples with columns:
+        [x, y, timestamp, pen_status, azimuth, altitude, pressure].
+        Lines that do not have exactly 7 values are ignored.
+    """
+    
     data = []
     with open(file_path, 'r') as file:
         lines = file.readlines()
@@ -20,7 +37,22 @@ def read_svc_file(file_path):
 
 
 def read_all_svc_files(file_path):
-    """Read all .svc files in a folder and return as dictionary of numpy arrays"""
+
+    """
+    Read all .svc/.SVC files from a directory into a dictionary of NumPy arrays.
+
+    Input
+    -----
+    file_path : str
+        Directory containing .svc (or .SVC) files.
+
+    Output
+    ------
+    dataset : dict[str, np.ndarray]
+        Dictionary mapping each file's base name (filename without extension)
+        to a NumPy array of shape (N, 7) produced by `read_svc_file`.
+        Example: dataset["sample_001"] -> array([[x, y, t, status, az, alt, p], ...]).
+    """
     
     svc_files = glob.glob(os.path.join(file_path, "*.svc")) + glob.glob(os.path.join(file_path, "*.SVC"))
     svc_files.sort()
