@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import os
 import matplotlib.pyplot as plt
 
 from datasets.iam_dataset import IAMDataset
@@ -17,7 +18,9 @@ def run_sanity_check(
     Run sanity check by comparing ground truth and predicted trajectory
     for one IAM sample and save the plot.
     """
-
+    
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
     # ---------------------------
     # DEVICE
     # ---------------------------
