@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 from datasets.iam_dataset import IAMDataset
 from models.build_reverse_model import ReverseModel
@@ -36,5 +37,7 @@ plt.subplot(1,2,2)
 plt.title("Predicted")
 plt.plot(traj_pred[:,0], -traj_pred[:,1])
 plt.axis("equal")
+os.makedirs("results", exist_ok=True)
+plt.savefig("sanity_check_iam.png", dpi=300, bbox_inches="tight")
 
 plt.show()
