@@ -36,7 +36,7 @@ class IAMDataset(Dataset):
             img_path = os.path.join(self.image_root, f"{row['id']}.png")
 
         # Load image
-        img = Image.open(row["image"]).convert("L")
+        img = Image.open(img_path).convert("L")
         img = self.image_transform(img)
 
         # Load trajectory

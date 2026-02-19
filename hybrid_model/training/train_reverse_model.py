@@ -2,9 +2,8 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from datasets import IAMDataset
-from model import build_reverse_model
-
+from datasets.iam_dataset import IAMDataset
+from models.reverse_model import ReverseModel
 
 # ---------------------------
 # CONFIG
@@ -33,7 +32,7 @@ def run_train():
     dataset = IAMDataset("data/processed/IAM_OnDB/metadata.csv")
     loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 
-    model = build_reverse_model().to(DEVICE)
+    model = ReverseModel().to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
     for epoch in range(EPOCHS):
