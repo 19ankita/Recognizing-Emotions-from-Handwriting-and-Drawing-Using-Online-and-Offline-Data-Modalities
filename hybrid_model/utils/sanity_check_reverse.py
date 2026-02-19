@@ -2,8 +2,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
-from hybrid_model.datasets.iam_dataset import IAMDataset
-from hybrid_model.models.reverse_model import ReverseModel
+from datasets.iam_dataset import IAMDataset
+from models.reverse_model import ReverseModel
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_PATH = "reverse_model.pth"
