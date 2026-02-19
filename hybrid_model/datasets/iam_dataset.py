@@ -11,10 +11,10 @@ from torchvision import transforms
 class IAMDataset(Dataset):
     def __init__(self, 
                  metadata_csv, 
-                 image_root="data/IAM_OnDB/images",
+                 image_root="data/raw/IAM_OnDB/images",
                  image_size=224
     ):
-        self.df = pd.read_csv(metadata_csv, sep=";")
+        self.df = pd.read_csv(metadata_csv)
         self.df.columns = self.df.columns.str.strip()
         self.image_root = image_root
 
@@ -29,18 +29,15 @@ class IAMDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        
-        if "image" in self.df.columns:
-            img_path = row["image"]
-        else:
-            img_path = os.path.join(self.image_root, f"{row['id']}.png")
 
-        # Load image
+        img_path = row["image"]
+        traj_path = row["trajectory"]
+
         img = Image.open(img_path).convert("L")
         img = self.image_transform(img)
 
-        # Load trajectory
-        traj = np.load(row["trajectory"])
+        traj = np.load(traj_path)
         traj = torch.tensor(traj, dtype=torch.float32)
 
         return img, traj
+
