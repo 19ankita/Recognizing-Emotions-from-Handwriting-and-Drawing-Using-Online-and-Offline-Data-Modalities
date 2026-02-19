@@ -2,10 +2,10 @@ from preprocessing.trajectory_processing import parse_whiteboard_xml, normalize_
 from preprocessing.render_iam_images import render_xml_to_image
 from training.train_reverse_model import run_train
 
-from inference.run_pseudo import main as run_pseudo_main
-from inference.generate_pseudo_trajectories_emothaw import main as generate_pseudo_main
+# from inference.run_pseudo import main as run_pseudo_main
+# from inference.generate_pseudo_trajectories_emothaw import main as generate_pseudo_main
 
-from features.trajectory_features import main as feature_extraction_main
+# from features.trajectory_features import main as feature_extraction_main
 
 import os
 import numpy as np
