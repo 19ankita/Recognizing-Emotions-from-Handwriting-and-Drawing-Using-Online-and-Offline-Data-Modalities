@@ -1,9 +1,11 @@
 from preprocessing.trajectory_processing import parse_whiteboard_xml, normalize_trajectory, resample_trajectory
 from preprocessing.render_iam_images import render_xml_to_image
 from training.train_reverse_model import run_train
-
+from utils.sanity_check_reverse import run_sanity_check
+from inference.generate_pseudo_trajectories_emothaw import main as generate_pseudo_trajectories
+from inference.visualize_pseudo import visualize_pseudo_trajectories
 # from inference.run_pseudo import main as run_pseudo_main
-# from inference.generate_pseudo_trajectories_emothaw import main as generate_pseudo_main
+
 
 # from features.trajectory_features import main as feature_extraction_main
 
@@ -38,7 +40,7 @@ def main():
         img_path = os.path.join(IMG_DIR, fname.replace(".xml", ".png"))
         out_path = os.path.join(OUT_DIR, fname.replace(".xml", ".npy"))
 
-        # Render image
+        # Render images from the online trajectories for IAM_OnDB
         render_xml_to_image(xml_path, img_path)
 
         # Parse trajectory
@@ -52,7 +54,7 @@ def main():
         # Resample
         traj = resample_trajectory(traj, NUM_POINTS)
 
-        # Save
+        # Save the trajectories for IAM_OnDB
         np.save(out_path, traj)
 
         records.append({
@@ -67,13 +69,23 @@ def main():
 
     pd.DataFrame(records).to_csv(META_CSV, index=False)
 
-    # 4. Train reverse model
+    # Train reverse model on IAM_onDB
     print("Training reverse model...")
     run_train()
+    
+    print("Sanity check for the reverse...")
+    run_sanity_check()
 
-    # # 5. Run pseudo generation
-    # print("Running pseudo generation...")
-    # run_pseudo_main()
+    # Run pseudo generation from EMOTHAW
+    print("Running pseudo generation...")
+    generate_pseudo_trajectories()
+    
+    print("Visualizing pseudo trajectories...")
+    visualize_pseudo_trajectories(
+        task="cursive_writing",
+        num_samples=9,
+        overlay=True
+    )
 
     # # 6. Generate EMOTHAW pseudo trajectories
     # print("Generating pseudo trajectories for EMOTHAW...")
