@@ -6,8 +6,8 @@ import random
 
 def visualize_pseudo_trajectories(
     task="cursive_writing",
-    pseudo_root="data/EMOTHAW/pseudo_trajectories",
-    output_root="data/EMOTHAW/visualizations",
+    pseudo_root="data/processed/EMOTHAW/pseudo_trajectories",
+    output_root="data/processed/EMOTHAW/visualizations",
     num_samples=9,
     overlay=True,
     seed=42

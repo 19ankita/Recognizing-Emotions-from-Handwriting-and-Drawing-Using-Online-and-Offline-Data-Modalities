@@ -2,11 +2,9 @@ from preprocessing.trajectory_processing import parse_whiteboard_xml, normalize_
 from preprocessing.render_iam_images import render_xml_to_image
 from training.train_reverse_model import run_train
 from utils.sanity_check_reverse import run_sanity_check
-from inference.generate_pseudo_trajectories_emothaw import main as generate_pseudo_trajectories
-from inference.visualize_pseudo import visualize_pseudo_trajectories
+from inference.generate_pseudo_trajectories_emothaw import generate_pseudo_trajectories
+from utils.plot_emothaw_pseudo_trajectories import visualize_pseudo_trajectories
 # from inference.run_pseudo import main as run_pseudo_main
-
-
 # from features.trajectory_features import main as feature_extraction_main
 
 import os

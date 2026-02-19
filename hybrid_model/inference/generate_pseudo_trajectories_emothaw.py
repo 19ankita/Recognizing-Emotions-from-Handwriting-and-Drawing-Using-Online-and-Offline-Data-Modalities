@@ -8,8 +8,8 @@ from models.build_reverse_model import ReverseModel
 
 
 def generate_pseudo_trajectories(
-    emothaw_root="data/EMOTHAW",
-    out_root="data/EMOTHAW/pseudo_trajectories",
+    emothaw_root="data/raw/EMOTHAW",
+    out_root="data/processed/EMOTHAW/pseudo_trajectories",
     model_path="reverse_model.pth",
     task="cursive_writing",
     seq_len=200,
