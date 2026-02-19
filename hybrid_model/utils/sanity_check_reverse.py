@@ -3,12 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from datasets.iam_dataset import IAMDataset
-from models.reverse_model import ReverseModel
+from models.build_reverse_model import ReverseModel
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 MODEL_PATH = "reverse_model.pth"
 
-dataset = IAMDataset("data/IAM_OnDB/processed/metadata.csv")
+dataset = IAMDataset("data/processed/IAM_OnDB/metadata.csv")
 
 model = ReverseModel()
 model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
