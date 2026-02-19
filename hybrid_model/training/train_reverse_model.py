@@ -3,7 +3,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 from datasets.iam_dataset import IAMDataset
-from models.reverse_model import ReverseModel
+from models.build_reverse_model import ReverseModel
 
 # ---------------------------
 # CONFIG
