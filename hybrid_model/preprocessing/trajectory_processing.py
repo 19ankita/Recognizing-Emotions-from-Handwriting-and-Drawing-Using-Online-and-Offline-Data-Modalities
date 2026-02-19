@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 import numpy as np
+import os
 
 def parse_whiteboard_xml(xml_path):
     points = []

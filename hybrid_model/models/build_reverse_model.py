@@ -7,7 +7,7 @@ class CNNEncoder(nn.Module):
     def __init__(self, latent_dim=128):
         super().__init__()
 
-        backbone = models.resnet18(weights=None)
+        backbone = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         backbone.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
         backbone.fc = nn.Identity()
 

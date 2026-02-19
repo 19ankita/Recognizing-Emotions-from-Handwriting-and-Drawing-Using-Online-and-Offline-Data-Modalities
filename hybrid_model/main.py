@@ -1,57 +1,87 @@
-# ============================================
-# HYBRID EMOTION FULL PIPELINE
-# ============================================
-
-from preprocessing.parse_xml import main as parse_xml_main
-from preprocessing.preprocessing import main as preprocessing_main
-from preprocessing.render_iam_images import main as render_images_main
-
-from training.train_reverse_model import main as train_reverse_main
+from preprocessing.trajectory_processing import parse_whiteboard_xml, normalize_trajectory, resample_trajectory
+from preprocessing.render_iam_images import render_xml_to_image
+from training.train_reverse_model import run_train
 
 from inference.run_pseudo import main as run_pseudo_main
 from inference.generate_pseudo_trajectories_emothaw import main as generate_pseudo_main
 
 from features.trajectory_features import main as feature_extraction_main
 
+import os
+import numpy as np
+import pandas as pd
+
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+# ---------------------------
+# CONFIG
+# ---------------------------
+TRAJ_DIR = "data/raw/IAM_OnDB/trajectories"
+IMG_DIR  = "data/raw/IAM_OnDB/images"
+OUT_DIR  = "data/processed/IAM_OnDB/trajectories_npy"
+META_CSV = "data/processed/IAM_OnDB/metadata.csv"
+
+NUM_POINTS = 200
 
 def main():
+    
+    os.makedirs(IMG_DIR, exist_ok=True)
+    os.makedirs(OUT_DIR, exist_ok=True)
+    
+    records = []
+    
+    xml_files = [f for f in os.listdir(TRAJ_DIR) if f.endswith(".xml")]
+    print(f"Found {len(xml_files)} XML files")
 
-    print("\n==============================")
-    print(" HYBRID EMOTION PIPELINE START")
-    print("==============================\n")
+    for i, fname in enumerate(xml_files):
+        xml_path = os.path.join(TRAJ_DIR, fname)
+        img_path = os.path.join(IMG_DIR, fname.replace(".xml", ".png"))
+        out_path = os.path.join(OUT_DIR, fname.replace(".xml", ".npy"))
 
-    # 1. Parse IAM XML
-    print("Step 1: Parsing IAM XML...")
-    parse_xml_main()
+        # Render image
+        render_xml_to_image(xml_path, img_path)
 
-    # 2. Preprocess trajectories
-    print("Step 2: Preprocessing trajectories...")
-    preprocessing_main()
+        # Parse trajectory
+        traj = parse_whiteboard_xml(xml_path)
+        if len(traj) < 10:
+            continue
 
-    # 3. Render IAM images
-    print("Step 3: Rendering IAM images...")
-    render_images_main()
+        # Normalize
+        traj = normalize_trajectory(traj)
+
+        # Resample
+        traj = resample_trajectory(traj, NUM_POINTS)
+
+        # Save
+        np.save(out_path, traj)
+
+        records.append({
+            "id": fname.replace(".xml", ""),
+            "xml": xml_path,
+            "image": img_path,
+            "trajectory": out_path
+        })
+
+        if (i + 1) % 100 == 0:
+            print(f"Processed {i + 1}/{len(xml_files)}")
+
+    pd.DataFrame(records).to_csv(META_CSV, index=False)
 
     # 4. Train reverse model
-    print("Step 4: Training reverse model...")
-    train_reverse_main()
+    print("Training reverse model...")
+    run_train()
 
-    # 5. Run pseudo generation
-    print("Step 5: Running pseudo generation...")
-    run_pseudo_main()
+    # # 5. Run pseudo generation
+    # print("Running pseudo generation...")
+    # run_pseudo_main()
 
-    # 6. Generate EMOTHAW pseudo trajectories
-    print("Step 6: Generating pseudo trajectories for EMOTHAW...")
-    generate_pseudo_main()
+    # # 6. Generate EMOTHAW pseudo trajectories
+    # print("Generating pseudo trajectories for EMOTHAW...")
+    # generate_pseudo_main()
 
-    # 7. Extract trajectory features
-    print("Step 7: Extracting trajectory features...")
-    feature_extraction_main()
-
-    print("\n==============================")
-    print(" PIPELINE COMPLETED SUCCESSFULLY ")
-    print("==============================\n")
-
+    # # 7. Extract trajectory features
+    # print("Extracting trajectory features...")
+    # feature_extraction_main()
 
 if __name__ == "__main__":
     main()

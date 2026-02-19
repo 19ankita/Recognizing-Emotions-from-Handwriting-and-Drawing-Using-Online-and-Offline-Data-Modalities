@@ -2,8 +2,8 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from src.datasets.iam_dataset import IAMDataset
-from src.models.reverse_model import ReverseModel
+from dataset import IAMDataset
+from model import build_reverse_model
 
 
 # ---------------------------
@@ -29,11 +29,11 @@ def smoothness_loss(traj):
 # ---------------------------
 # TRAINING
 # ---------------------------
-def main():
-    dataset = IAMDataset("data/IAM_OnDB/processed/metadata.csv")
+def run_train():
+    dataset = IAMDataset("data/processed/IAM_OnDB/metadata.csv")
     loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 
-    model = ReverseModel().to(DEVICE)
+    model = build_reverse_model().to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
     for epoch in range(EPOCHS):
@@ -64,5 +64,3 @@ def main():
     print("Model saved")
 
 
-if __name__ == "__main__":
-    main()
