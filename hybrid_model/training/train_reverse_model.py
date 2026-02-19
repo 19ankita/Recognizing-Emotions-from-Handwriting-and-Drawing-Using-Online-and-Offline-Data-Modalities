@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-from dataset import IAMDataset
+from datasets import IAMDataset
 from model import build_reverse_model
 
 
