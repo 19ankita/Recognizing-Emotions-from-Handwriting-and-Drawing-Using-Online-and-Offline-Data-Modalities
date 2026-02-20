@@ -1,31 +1,25 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
 import random
 
 
 def visualize_pseudo_trajectories(
     task="cursive_writing",
     pseudo_root="data/processed/EMOTHAW/pseudo_trajectories",
+    image_root="data/raw/EMOTHAW",
     output_root="data/processed/EMOTHAW/visualizations",
-    num_samples=9,
-    overlay=True,
+    num_samples=6,
     seed=42
 ):
-    """
-    Advanced visualization of pseudo-trajectories.
-
-    Features:
-    - Random sampling
-    - Grid plotting
-    - Overlay mode (all trajectories in one plot)
-    - Automatically saves figures
-    """
 
     random.seed(seed)
 
     pseudo_dir = os.path.join(pseudo_root, task)
+    image_dir = os.path.join(image_root, task)
     output_dir = os.path.join(output_root, task)
+
     os.makedirs(output_dir, exist_ok=True)
 
     if not os.path.exists(pseudo_dir):
@@ -44,43 +38,34 @@ def visualize_pseudo_trajectories(
     print(f"[{task}] Randomly selected {num_samples} trajectories")
 
     # --------------------------------------------------
-    # GRID PLOT
+    # SIDE-BY-SIDE PLOT
     # --------------------------------------------------
-    grid_size = int(np.ceil(np.sqrt(num_samples)))
-
-    plt.figure(figsize=(12, 12))
+    plt.figure(figsize=(10, 4 * num_samples))
 
     for i, fname in enumerate(sampled_files):
+
         traj = np.load(os.path.join(pseudo_dir, fname))
 
-        plt.subplot(grid_size, grid_size, i + 1)
+        image_name = fname.replace(".npy", ".png")  # adjust if extension differs
+        image_path = os.path.join(image_dir, image_name)
+
+        # --- Original Image ---
+        plt.subplot(num_samples, 2, 2*i + 1)
+        img = Image.open(image_path).convert("L")
+        plt.imshow(img, cmap="gray")
+        plt.title(f"Original: {image_name[:15]}", fontsize=8)
+        plt.axis("off")
+
+        # --- Predicted Trajectory ---
+        plt.subplot(num_samples, 2, 2*i + 2)
         plt.plot(traj[:, 0], -traj[:, 1])
-        plt.title(fname[:15], fontsize=8)
+        plt.title("Pseudo Trajectory", fontsize=8)
         plt.axis("equal")
         plt.axis("off")
 
-    grid_path = os.path.join(output_dir, f"{task}_grid.png")
+    comparison_path = os.path.join(output_dir, f"{task}_comparison.png")
     plt.tight_layout()
-    plt.savefig(grid_path, dpi=300, bbox_inches="tight")
+    plt.savefig(comparison_path, dpi=300, bbox_inches="tight")
     plt.close()
 
-    print(f"Grid saved to {grid_path}")
-
-    # --------------------------------------------------
-    # OVERLAY PLOT
-    # --------------------------------------------------
-    if overlay:
-        plt.figure(figsize=(8, 8))
-
-        for fname in sampled_files:
-            traj = np.load(os.path.join(pseudo_dir, fname))
-            plt.plot(traj[:, 0], -traj[:, 1], alpha=0.7)
-
-        plt.title(f"{task} - Overlay Comparison")
-        plt.axis("equal")
-
-        overlay_path = os.path.join(output_dir, f"{task}_overlay.png")
-        plt.savefig(overlay_path, dpi=300, bbox_inches="tight")
-        plt.close()
-
-        print(f"Overlay saved to {overlay_path}")
+    print(f"Side-by-side comparison saved to {comparison_path}")
