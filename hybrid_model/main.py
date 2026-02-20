@@ -24,6 +24,9 @@ OUT_DIR  = "data/processed/IAM_OnDB/trajectories_npy"
 META_CSV = "data/processed/IAM_OnDB/metadata.csv"
 LABELS_CSV = "labels/DASS_scores_global.csv"
 
+features_csv = "data/processed/EMOTHAW/pseudo_features/cursive_writing_pseudo_features.csv"
+merged_csv   = "data/processed/EMOTHAW/pseudo_features/cursive_writing_pseudo_with_labels.csv"
+
 NUM_POINTS = 200
 
 def extract_global_user(id_str: str):
@@ -152,6 +155,13 @@ def main():
         traj_root="data/processed/EMOTHAW/pseudo_trajectories",
         out_root="data/processed/EMOTHAW/pseudo_features",
     )
+    
+    print("Merging the EMOTHAW pseudo features with the DASS labels...")
+    merge_pseudo_features_with_labels(
+    features_csv=features_csv,
+    labels_csv=LABELS_CSV,   # "labels/DASS_scores_global.csv"
+    merged_csv=merged_csv
+)
 
     # # 7. Extract trajectory features
     # print("Extracting trajectory features...")
