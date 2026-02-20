@@ -11,15 +11,12 @@ def visualize_pseudo_trajectories(
     image_root="data/raw/EMOTHAW",
     output_root="data/processed/EMOTHAW/visualizations",
     num_samples=6,
-    seed=42,
-    overlay=False,          
-    grid=True,              
-    grid_cols=3            
+    seed=42
 ):
     random.seed(seed)
 
     pseudo_dir = os.path.join(pseudo_root, task)
-    image_dir = os.path.join(image_root, task)
+    image_dir  = os.path.join(image_root, task)
     output_dir = os.path.join(output_root, task)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -36,75 +33,40 @@ def visualize_pseudo_trajectories(
     sampled_files = random.sample(files, num_samples)
     print(f"[{task}] Randomly selected {num_samples} trajectories")
 
-    # ==================================================
-    # 1) OVERLAY MODE (all trajectories in one plot)
-    # ==================================================
-    if overlay:
-        plt.figure(figsize=(7, 7))
-        for fname in sampled_files:
-            traj = np.load(os.path.join(pseudo_dir, fname))
-            plt.plot(traj[:, 0], -traj[:, 1], linewidth=1)
-
-        plt.title(f"{task} — Overlay of {num_samples} pseudo trajectories")
-        plt.axis("equal")
-        plt.axis("off")
-
-        overlay_path = os.path.join(output_dir, f"{task}_overlay_{num_samples}.png")
-        plt.tight_layout()
-        plt.savefig(overlay_path, dpi=300, bbox_inches="tight")
-        plt.close()
-        print(f"Overlay saved to {overlay_path}")
-        return
-
-    # ==================================================
-    # 2) GRID MODE (multiple trajectories in a grid)
-    # ==================================================
-    if grid:
-        rows = int(np.ceil(num_samples / grid_cols))
-        plt.figure(figsize=(4 * grid_cols, 4 * rows))
-
-        for i, fname in enumerate(sampled_files):
-            traj = np.load(os.path.join(pseudo_dir, fname))
-            plt.subplot(rows, grid_cols, i + 1)
-            plt.plot(traj[:, 0], -traj[:, 1], linewidth=1)
-            plt.title(fname[:18], fontsize=8)
-            plt.axis("equal")
-            plt.axis("off")
-
-        grid_path = os.path.join(output_dir, f"{task}_grid_{num_samples}.png")
-        plt.tight_layout()
-        plt.savefig(grid_path, dpi=300, bbox_inches="tight")
-        plt.close()
-        print(f"Grid saved to {grid_path}")
-        return
-
-    # ==================================================
-    # 3) SIDE-BY-SIDE MODE (your original: image + traj)
-    # ==================================================
+    # --------------------------------------------------
+    # SIDE-BY-SIDE (original image | predicted trajectory)
+    # --------------------------------------------------
     plt.figure(figsize=(10, 4 * num_samples))
 
     for i, fname in enumerate(sampled_files):
-        traj = np.load(os.path.join(pseudo_dir, fname))
+        traj_path = os.path.join(pseudo_dir, fname)
+        traj = np.load(traj_path)
 
-        image_name = fname.replace(".npy", ".png")  # adjust if needed
+        # assuming the EMOTHAW image has same base name as npy
+        image_name = fname.replace(".npy", ".png")
         image_path = os.path.join(image_dir, image_name)
 
         # Original image
         plt.subplot(num_samples, 2, 2 * i + 1)
-        img = Image.open(image_path).convert("L")
-        plt.imshow(img, cmap="gray")
-        plt.title(f"Original: {image_name[:15]}", fontsize=8)
+        if os.path.exists(image_path):
+            img = Image.open(image_path).convert("L")
+            plt.imshow(img, cmap="gray")
+            plt.title(f"Original: {image_name[:25]}", fontsize=9)
+        else:
+            plt.text(0.5, 0.5, f"Missing image:\n{image_name}", ha="center", va="center")
+            plt.title("Original (missing)", fontsize=9)
         plt.axis("off")
 
-        # Pseudo trajectory
+        # Predicted trajectory
         plt.subplot(num_samples, 2, 2 * i + 2)
-        plt.plot(traj[:, 0], -traj[:, 1])
-        plt.title("Pseudo Trajectory", fontsize=8)
+        plt.plot(traj[:, 0], -traj[:, 1], linewidth=1)
+        plt.title("Predicted (Pseudo) Trajectory", fontsize=9)
         plt.axis("equal")
         plt.axis("off")
 
-    comparison_path = os.path.join(output_dir, f"{task}_comparison.png")
+    out_path = os.path.join(output_dir, f"{task}_side_by_side_{num_samples}.png")
     plt.tight_layout()
-    plt.savefig(comparison_path, dpi=300, bbox_inches="tight")
+    plt.savefig(out_path, dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"Side-by-side comparison saved to {comparison_path}")
+
+    print(f"Saved side-by-side comparison to {out_path}")
