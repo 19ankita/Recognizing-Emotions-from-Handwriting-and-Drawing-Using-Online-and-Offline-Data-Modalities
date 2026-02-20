@@ -165,9 +165,6 @@ def main():
     )
 
     print("Regression run...")
-    run_regression()
-    
-    print("Regression run...")
     run_regression(
         merged_csv=merged_csv,
         task="cursive_writing",
