@@ -56,8 +56,8 @@ def merge_pseudo_features_with_labels(
     merged_csv: str,
 ):
     # Load
-    features = pd.read_csv(features_csv)
-    labels = pd.read_csv(labels_csv)
+    features = pd.read_csv(features_csv, sep=None, engine="python")
+    labels = pd.read_csv(labels_csv, sep=None, engine="python")
 
     # Ensure features have user
     features["user"] = features["id"].apply(extract_global_user)
