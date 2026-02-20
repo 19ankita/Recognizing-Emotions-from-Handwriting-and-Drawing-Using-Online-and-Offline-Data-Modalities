@@ -11,6 +11,7 @@ from features.extract_pseudo_features_emothaw import run_pseudo_feature_extracti
 import os
 import numpy as np
 import pandas as pd
+import re
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,8 +22,67 @@ TRAJ_DIR = "data/raw/IAM_OnDB/trajectories"
 IMG_DIR  = "data/raw/IAM_OnDB/images"
 OUT_DIR  = "data/processed/IAM_OnDB/trajectories_npy"
 META_CSV = "data/processed/IAM_OnDB/metadata.csv"
+LABELS_CSV = "labels/DASS_scores_global.csv"
 
 NUM_POINTS = 200
+
+def extract_global_user(id_str: str):
+    """
+    Extract global user index from sample id.
+    u01..u45 -> 1..45
+    v01..v84 -> 46..129 (offset +45)
+    """
+    if not isinstance(id_str, str):
+        return None
+
+    match = re.search(r"([uv])(\d+)", id_str)
+    if not match:
+        return None
+
+    prefix, user = match.group(1), int(match.group(2))
+
+    if prefix == "u":
+        return user
+    if prefix == "v":
+        return user + 45
+    return None
+
+def merge_pseudo_features_with_labels(
+    features_csv: str,
+    labels_csv: str,
+    merged_csv: str,
+):
+    # Load
+    features = pd.read_csv(features_csv)
+    labels = pd.read_csv(labels_csv)
+
+    # Ensure features have user
+    features["user"] = features["id"].apply(extract_global_user)
+
+    # Make sure labels have "user" too
+    # If labels already have a numeric user column -> keep it.
+    # If labels has an id-like column (e.g., "id"), map it.
+    if "user" not in labels.columns:
+        # common alternatives people use:
+        for candidate in ["id", "subject", "participant", "user_id"]:
+            if candidate in labels.columns:
+                labels["user"] = labels[candidate].apply(extract_global_user)
+                break
+
+    # Keep only rows with valid user
+    features = features.dropna(subset=["user"])
+    labels = labels.dropna(subset=["user"])
+
+    features["user"] = features["user"].astype(int)
+    labels["user"] = labels["user"].astype(int)
+
+    # Merge
+    merged = features.merge(labels, on="user", how="inner")
+
+    # Save
+    os.makedirs(os.path.dirname(merged_csv), exist_ok=True)
+    merged.to_csv(merged_csv, index=False)
+    print(f"[INFO] Saved merged pseudo+labels to {merged_csv} ({len(merged)} rows)")
 
 def main():
     
