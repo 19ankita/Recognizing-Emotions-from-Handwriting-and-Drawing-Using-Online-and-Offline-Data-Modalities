@@ -1,10 +1,13 @@
-# features/extract_pseudo_features_emothaw.py
 import os
 import numpy as np
 import pandas as pd
 
 
 def extract_pseudo_features(traj: np.ndarray):
+    """
+    traj: np.ndarray shape (T, D), D>=2. Uses columns 0,1 as x,y.
+    Returns dict with the 9 pseudo numeric features.
+    """
     # --- safety checks ---
     if traj is None or traj.ndim != 2 or traj.shape[1] < 2 or traj.shape[0] < 2:
         return None
@@ -12,23 +15,57 @@ def extract_pseudo_features(traj: np.ndarray):
     x = traj[:, 0].astype(np.float64)
     y = traj[:, 1].astype(np.float64)
 
+    # Step-wise differences
     dx = np.diff(x)
     dy = np.diff(y)
-    speed = np.sqrt(dx**2 + dy**2)
+    step_dist = np.sqrt(dx**2 + dy**2)
 
-    # speed length is T-1, so still can’t be empty because T>=2
-    path_length = float(np.sum(speed))
+    # If step_dist is empty (shouldn't happen because T>=2), guard anyway
+    if step_dist.size == 0:
+        return None
 
-    features = {
+    # -------------------------
+    # Path-based features
+    # -------------------------
+    path_length = float(step_dist.sum())
+
+    displacement = float(np.sqrt((x[-1] - x[0])**2 + (y[-1] - y[0])**2))
+    straightness = float(displacement / (path_length + 1e-8))
+
+    # -------------------------
+    # Directional features
+    # -------------------------
+    angles = np.arctan2(dy, dx)  # radians
+
+    dominant_angle = float(np.arctan2(np.mean(np.sin(angles)), np.mean(np.cos(angles))))
+
+    R = float(np.sqrt(np.mean(np.cos(angles))**2 + np.mean(np.sin(angles))**2))
+    direction_concentration = R  # [0, 1]
+
+    # -------------------------
+    # Spatial layout features
+    # -------------------------
+    width = float(x.max() - x.min())
+    height = float(y.max() - y.min())
+    aspect_ratio = float(width / (height + 1e-8))
+
+    # -------------------------
+    # Speed proxy statistics
+    # -------------------------
+    median_speed = float(np.median(step_dist))
+    p95_speed = float(np.percentile(step_dist, 95))
+
+    return {
         "path_length": path_length,
-        "mean_speed": float(np.mean(speed)),
-        "std_speed": float(np.std(speed)),
-        "max_speed": float(np.max(speed)),
-        "straightness": float(
-            np.linalg.norm([x[-1] - x[0], y[-1] - y[0]]) / (path_length + 1e-8)
-        ),
+        "straightness": straightness,
+        "dominant_angle": dominant_angle,
+        "direction_concentration": direction_concentration,
+        "width": width,
+        "height": height,
+        "aspect_ratio": aspect_ratio,
+        "median_speed": median_speed,
+        "p95_speed": p95_speed,
     }
-    return features
 
 
 def run_pseudo_feature_extraction(
@@ -64,6 +101,7 @@ def run_pseudo_feature_extraction(
             if feats is None:
                 continue
 
+            # IMPORTANT: keep 'id' for merging later
             feats["id"] = fname.replace(".npy", "")
             rows.append(feats)
 

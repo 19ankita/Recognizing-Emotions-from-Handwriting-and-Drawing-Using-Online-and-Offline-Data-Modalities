@@ -5,7 +5,7 @@ from utils.sanity_check_reverse import run_sanity_check
 from inference.generate_pseudo_trajectories_emothaw import generate_pseudo_trajectories
 from utils.plot_emothaw_pseudo_trajectories import visualize_pseudo_trajectories
 from features.extract_pseudo_features_emothaw import run_pseudo_feature_extraction
-# from inference.run_pseudo import main as run_pseudo_main
+from training.run_regression import run_regression
 
 
 import os
@@ -138,7 +138,7 @@ def main():
     print("Sanity check for the reverse...")
     run_sanity_check()
 
-    # Run pseudo generation from EMOTHAW
+    # Run pseudo trajectories generation from EMOTHAW
     print("Running pseudo generation...")
     generate_pseudo_trajectories()
     
@@ -148,7 +148,7 @@ def main():
         num_samples=2
     )
 
-    # Generate EMOTHAW pseudo trajectories
+    # Generate EMOTHAW pseudo features
     print("Extracting pseudo trajectory features...")
     run_pseudo_feature_extraction(
         tasks=("cursive_writing",),
@@ -156,16 +156,24 @@ def main():
         out_root="data/processed/EMOTHAW/pseudo_features",
     )
     
+    # Merge the pseudo features with the DASS labels
     print("Merging the EMOTHAW pseudo features with the DASS labels...")
     merge_pseudo_features_with_labels(
     features_csv=features_csv,
     labels_csv=LABELS_CSV,   # "labels/DASS_scores_global.csv"
     merged_csv=merged_csv
-)
+    )
 
-    # # 7. Extract trajectory features
-    # print("Extracting trajectory features...")
-    # feature_extraction_main()
+    print("Regression run...")
+    run_regression()
+    
+    print("Regression run...")
+    run_regression(
+        merged_csv=merged_csv,
+        task="cursive_writing",
+        out_root="results/pseudo",
+        targets=("stress", "anxiety", "depression", "total")
+)
 
 if __name__ == "__main__":
     main()
