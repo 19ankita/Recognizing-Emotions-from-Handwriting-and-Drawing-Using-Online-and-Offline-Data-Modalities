@@ -4,8 +4,9 @@ from training.train_reverse_model import run_train
 from utils.sanity_check_reverse import run_sanity_check
 from inference.generate_pseudo_trajectories_emothaw import generate_pseudo_trajectories
 from utils.plot_emothaw_pseudo_trajectories import visualize_pseudo_trajectories
+from features.extract_pseudo_features_emothaw import run_pseudo_feature_extraction
 # from inference.run_pseudo import main as run_pseudo_main
-# from features.trajectory_features import main as feature_extraction_main
+
 
 import os
 import numpy as np
@@ -84,9 +85,13 @@ def main():
         num_samples=2
     )
 
-    # # 6. Generate EMOTHAW pseudo trajectories
-    # print("Generating pseudo trajectories for EMOTHAW...")
-    # generate_pseudo_main()
+    # Generate EMOTHAW pseudo trajectories
+    print("Extracting pseudo trajectory features...")
+    run_pseudo_feature_extraction(
+        tasks=("cursive_writing",),
+        traj_root="data/processed/EMOTHAW/pseudo_trajectories",
+        out_root="data/processed/EMOTHAW/pseudo_features",
+    )
 
     # # 7. Extract trajectory features
     # print("Extracting trajectory features...")
