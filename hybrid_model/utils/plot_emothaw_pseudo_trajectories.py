@@ -10,7 +10,7 @@ def visualize_pseudo_trajectories(
     pseudo_root="data/processed/EMOTHAW/pseudo_trajectories",
     image_root="data/raw/EMOTHAW",
     output_root="data/processed/EMOTHAW/visualizations",
-    num_samples=6,
+    num_samples=2,
     seed=42
 ):
     random.seed(seed)
