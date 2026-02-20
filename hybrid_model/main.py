@@ -81,7 +81,7 @@ def main():
     print("Visualizing pseudo trajectories...")
     visualize_pseudo_trajectories(
         task="cursive_writing",
-        num_samples=9
+        num_samples=2
     )
 
     # # 6. Generate EMOTHAW pseudo trajectories
