@@ -11,7 +11,8 @@ def extract_pseudo_features(traj: np.ndarray):
     # --- safety checks ---
     if traj is None or traj.ndim != 2 or traj.shape[1] < 2 or traj.shape[0] < 2:
         return None
-
+    
+    print("\n traj shap ",traj.shape)
     x = traj[:, 0].astype(np.float64)
     y = traj[:, 1].astype(np.float64)
 
