@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def extract_pseudo_features(traj: np.ndarray):
+def run_pseudo_feature_extraction(traj: np.ndarray):
     """
     traj: np.ndarray shape (T, D), expects D>=3 for temporal features
     Columns: x, y, t
