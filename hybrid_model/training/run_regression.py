@@ -6,15 +6,21 @@ from sklearn.metrics import r2_score, mean_squared_error
 from sklearn.model_selection import GroupShuffleSplit
 
 PSEUDO_FEATURES = [
+    # geometric
     "path_length",
     "straightness",
-    "dominant_angle",
-    "direction_concentration",
     "width",
     "height",
     "aspect_ratio",
-    "median_speed",
-    "p95_speed",
+
+    # temporal
+    "total_duration",
+    "mean_speed",
+    "std_speed",
+
+    # in-air
+    "estimated_in_air_time",
+    "in_air_ratio",
 ]
 
 def run_regression(merged_csv, task="cursive_writing", out_root="results/pseudo",
