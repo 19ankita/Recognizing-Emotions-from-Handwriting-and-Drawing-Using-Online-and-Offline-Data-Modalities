@@ -146,5 +146,3 @@ Derived from static handwriting to approximate temporal behavior:
 
 ---
 
-## 🔗 Final Model Pipeline
-
