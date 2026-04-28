@@ -1,39 +1,58 @@
+## 📌 Thesis Motivation
 
-📌 This project is based on my master’s thesis, which investigates whether human emotional states (stress, anxiety, depression) can be inferred from handwriting and drawing behavior.
+This project is based on my master’s thesis, which investigates whether human emotional states — **stress, anxiety, and depression** — can be inferred from handwriting and drawing behavior.
 
-The work leverages the EMOTHAW dataset, combining:
+The work leverages the **EMOTHAW dataset**, combining:
 
-- 🟢 Online data → temporal signals (pressure, speed, stroke dynamics)
-- 🔵 Offline data → static handwriting images
+- 🟢 **Online data** → temporal signals (pressure, speed, stroke dynamics)  
+- 🔵 **Offline data** → static handwriting images  
 
-A key research question:
+### ❓ Key Research Question
 
-Can static handwriting images alone capture emotional information typically present in dynamic writing signals?
+> Can static handwriting images alone capture emotional information typically present in dynamic writing signals?
 
-🎯 Core Contributions 
+---
+
+## 🎯 Core Contributions
 
 As defined in the thesis:
 
-- 1. Regression on Online Data
-Predict continuous DASS scores using handcrafted features
-- 2. Transfer Learning on Offline Images
-CNN-based classification + regression
-Uses pretrained ResNet
-- 3. Comparative Analysis
-Online vs Offline modalities
-Evaluates whether offline data alone is sufficient
+### 1. 📈 Regression on Online Data
+- Predict continuous **DASS scores** using handcrafted features  
+- Utilizes temporal handwriting dynamics (pressure, velocity, stroke patterns)
 
-📂 Dataset: EMOTHAW
-- 7 handwriting & drawing tasks
-- Collected using digital tablet
-- Annotated with:
- - Depression
- - Anxiety
- - Stress (DASS scores)
-Modalities:
-- Online signals:
- - Pen coordinates
- - Pressure
- - Time
--Offline images:
- - Reconstructed grayscale handwriting
+### 2. 🧠 Transfer Learning on Offline Images
+- CNN-based **classification + regression**
+- Uses pretrained **ResNet**
+- Learns emotional patterns directly from static handwriting images  
+
+### 3. ⚖️ Comparative Analysis
+- Systematic comparison of **online vs offline modalities**
+- Evaluates whether **offline data alone is sufficient** for emotion recognition  
+
+---
+
+## 📂 Dataset: EMOTHAW
+
+The project uses the **EMOTHAW dataset**, designed for multimodal handwriting-based emotion analysis.
+
+### ✍️ Data Collection
+- 7 handwriting & drawing tasks  
+- Collected using a **digital tablet**
+
+### 🧾 Annotations
+Each sample is labeled with:
+- Depression  
+- Anxiety  
+- Stress  
+(**DASS scores**)
+
+### 🔍 Modalities
+
+#### 🟢 Online Signals (Dynamic Data)
+- Pen coordinates  
+- Pressure  
+- Time  
+
+#### 🔵 Offline Images (Static Data)
+- Reconstructed grayscale handwriting images  
